@@ -1,0 +1,67 @@
+# 바로길
+
+주소·장소 검색 → 목적지 선택 → **TMAP / 카카오내비 앱 실행**을 연결하는 모바일 웹페이지입니다. 참고 이미지처럼 지도 아래에 흰색 카드 형태의 버튼 두 개를 배치했습니다.
+
+## 실행
+
+Node.js 22 이상에서 **start.cmd를 더블클릭**하거나 프로젝트 폴더를 열고 아래 명령을 실행합니다. 별도 패키지 설치는 없습니다.
+
+```powershell
+npm.cmd start
+```
+
+PC에서는 http://localhost:3000 을 엽니다. 휴대폰을 PC와 같은 Wi-Fi에 연결한 뒤 터미널에 표시된 `http://PC의IP:3000` 주소를 여세요. Windows 방화벽이 차단한다면 신뢰하는 개인 네트워크에서 Node.js의 접근을 허용해야 합니다. 외부 인터넷에 공개 배포한 상태는 아닙니다.
+
+## GitHub Pages에서 휴대폰으로 사용
+
+배포 주소: https://hkkim0454.github.io/kakaotmap/
+
+PC 서버를 켜거나 같은 Wi-Fi에 연결할 필요 없이 위 주소로 접속합니다. 카카오 개발자 설정에는 `https://hkkim0454.github.io`를 등록하고 페이지의 **연결 설정**에 JavaScript 키를 입력합니다. 브라우저별로 저장됩니다.
+
+`main` 브랜치에 push하면 GitHub Actions가 테스트 후 `public` 폴더만 Pages에 배포합니다. 서버 파일과 `.env`는 사이트에 배포하지 않습니다. GitHub Pages에서는 서버의 `.env` 설정이 적용되지 않습니다.
+
+## 필요한 키
+
+**카카오 JavaScript 키 하나가 필요합니다. TMAP API 키는 사용하지 않습니다.**
+
+1. https://developers.kakao.com/ 에서 개발자 앱과 JavaScript 키를 준비합니다.
+2. JavaScript SDK 도메인 및 지도 서비스 웹 도메인에 실제 접속 origin을 등록합니다. 예: `http://localhost:3000`, `http://192.168.0.10:3000`. 카카오맵 사용 설정/권한도 확인합니다.
+3. 페이지 오른쪽 위 **연결 설정**에서 JavaScript 키를 입력합니다. 현재 브라우저에 저장되므로 휴대폰에서도 입력해야 합니다.
+4. 여러 기기에서 같은 설정을 쓰려면 `.env.example`을 `.env`로 복사하고 `KAKAO_JAVASCRIPT_KEY=` 뒤에 키를 넣은 다음 서버를 다시 실행합니다.
+
+JavaScript 키는 브라우저에서 사용하는 공개 키입니다. REST API 키나 Admin 키를 입력하지 마세요. 서버는 public의 명시된 파일 및 공개 키 설정만 제공합니다.
+
+키가 없을 때는 초기 화면과 **예시 장소 보기**를 확인할 수 있습니다. 예시 목적지는 카카오 공식 내비 문서의 현대백화점 판교점 좌표를 사용합니다. 실제 검색 및 지도는 키·도메인·카카오맵 권한을 설정해야 동작합니다.
+
+## 앱 연결
+
+- TMAP: Android는 TMAP 패키지를 지정한 intent, iOS는 `tmap://route`로 목적지 전달.
+- 카카오내비: 공식 JavaScript SDK 2.8.3의 `Kakao.Navi.start` 사용.
+- 클릭 순간에 동기적으로 앱 호출합니다. 호출 전 비동기 검색/SDK 로딩을 기다리지 않습니다.
+- 지도 검색은 카카오 지도 SDK의 키워드 검색과 주소 검색을 병행하고 결과를 합칩니다. 같은 이름의 장소는 주소를 확인한 뒤 선택합니다.
+- 앱 실행 성공을 웹에서 확정하지 않습니다. 강제 스토어 이동 타이머를 두지 않고 설치 링크를 별도로 제공합니다. 카카오 SDK 자체의 설치 안내 동작은 SDK를 따릅니다.
+- PC에서는 앱 실행 대신 휴대폰 사용 안내를 보여줍니다.
+
+## 확인
+
+```powershell
+npm.cmd test
+```
+
+자동화 검증: 한글·특수문자 인코딩, 경도/위도 전달 순서, 좌표 검증, 검색 데이터 병합, OS 판별, 서버의 비공개 파일 차단.
+
+**실기기에서 확인할 항목**
+
+- Android Chrome / iPhone Safari에서 각 버튼을 눌렀을 때 올바른 앱과 목적지가 열리는지.
+- 카카오톡 내부 브라우저에서 차단되면 기본 브라우저로 다시 열어 동작하는지.
+- 앱 미설치 상황의 설치 안내, 브라우저 복귀 후 재실행.
+- 실제 카카오 키와 등록 도메인으로 주소/상호 검색 및 지도 표시.
+
+TMAP 호출 형식은 기기·앱 버전에 따라 호환성 확인이 필요합니다. 앱 열기 확인창이나 앱 내부의 경로 선택/안내 시작 단계는 OS와 내비 앱에서 결정합니다. 실기기 실행과 인증된 검색은 아직 검증하지 않았습니다.
+
+## 참고
+
+- https://developers.kakao.com/docs/ko/kakaonavi/js
+- https://developers.kakao.com/docs/ko/javascript/download
+- https://apis.map.kakao.com/web/documentation/
+- https://tmapapi.tmapmobility.com/main.html

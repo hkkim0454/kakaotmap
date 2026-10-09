@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f6f8fb">
+  <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
+  <title>바로길 · 원하는 내비로 바로 출발</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="header"><a class="brand" href="./" aria-label="바로길 홈"><span class="brand-mark">↗</span>바로길</a><button class="text-button" id="settings-open">연결 설정 <span aria-hidden="true">⚙</span></button></header>
+  <main>
+    <section class="intro"><span class="eyebrow">어디로 떠나시나요?</span><h1>목적지는 한 번만,<br>출발은 원하는 내비로.</h1><p>주소나 장소를 찾고, 익숙한 내비 앱으로 이동하세요.</p></section>
+    <form id="search-form" class="search-form" role="search"><label for="query" class="sr-only">주소 또는 장소명</label><span class="search-icon" aria-hidden="true">⌕</span><input id="query" type="search" placeholder="주소 또는 장소명을 입력하세요" maxlength="100" autocomplete="off" required><button id="search-button" type="submit">검색</button></form>
+    <div class="search-meta"><span>도로명 · 지번 · 상호명 검색</span><button id="sample-button" class="text-button">예시 장소 보기 ↗</button></div>
+    <p id="notice" class="notice" role="status" aria-live="polite"></p>
+    <section id="results-section" hidden aria-label="검색 결과"><div class="section-heading"><h2>검색 결과</h2><span id="result-count"></span></div><div id="results" class="results"></div><button id="more-results" class="secondary" hidden>결과 더 보기</button></section>
+    <section id="destination" class="destination" hidden aria-label="선택한 목적지">
+      <div class="destination-heading"><span class="eyebrow" id="destination-label">선택한 목적지</span><button class="text-button" id="copy-address">주소 복사 ↗</button></div>
+      <h2 id="place-name"></h2><p id="place-address"></p>
+      <div class="map-wrap"><div id="map" aria-label="목적지 지도"></div><div id="map-placeholder" class="map-placeholder"><span class="pin" aria-hidden="true">⌖</span><strong>목적지를 지도에서 확인하세요</strong><p>연결 설정 후 지도가 표시됩니다.</p></div></div>
+      <div class="navigation-heading"><h3>어떤 내비로 출발할까요?</h3><span>앱으로 바로 연결</span></div>
+      <div class="navigation-buttons">
+        <button id="tmap-button" class="navigation-card"><span class="app-icon tmap-icon" aria-hidden="true">T<span>MAP</span></span><strong>TMAP 길 안내</strong><span class="card-caption">TMAP으로 출발 <span aria-hidden="true">↗</span></span></button>
+        <button id="kakao-button" class="navigation-card"><span class="app-icon kakao-icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6L39 39L24 31L9 39Z" fill="#292b2f"/></svg></span><strong>카카오내비 길 안내</strong><span class="card-caption">카카오내비로 출발 <span aria-hidden="true">↗</span></span></button>
+      </div>
+      <p class="navigation-note">선택한 장소가 내비 앱의 목적지로 전달됩니다.</p>
+      <div id="launch-help" class="launch-help" hidden role="status"><strong id="launch-message"></strong><p>앱이 열리지 않으면 설치 여부를 확인해 주세요. 카카오톡 안에서는 메뉴에서 기본 브라우저로 열어 다시 눌러 주세요.</p><a id="store-link" class="secondary" target="_blank" rel="noopener noreferrer">앱 설치 페이지</a></div>
+    </section>
+    <section id="empty-state" class="empty-state"><span class="empty-icon" aria-hidden="true">⌖</span><h2>가고 싶은 곳을 찾아보세요</h2><p>장소를 선택하면 지도와<br>두 개의 길 안내 버튼이 나타납니다.</p></section>
+    <footer><span class="brand-mini">↗ 바로길</span><span>찾고, 고르고, 출발하세요.</span></footer>
+  </main>
+  <dialog id="settings"><form id="settings-form"><div class="dialog-heading"><h2>카카오 연결 설정</h2><button type="button" id="settings-close" class="text-button" aria-label="설정 닫기">✕</button></div><p>검색, 지도와 카카오내비를 사용하려면 카카오 개발자 앱의 <strong>JavaScript 키</strong>를 입력해 주세요.</p><label for="api-key">JavaScript 키</label><input id="api-key" autocomplete="off" spellcheck="false" placeholder="JavaScript 키 입력" pattern="[a-fA-F0-9]{32}" title="32자리 JavaScript 키를 입력해 주세요."><p class="field-help">이 브라우저에 저장됩니다. REST API 키나 Admin 키는 입력하지 마세요.</p><div class="setup-instructions"><strong>처음 연결할 때</strong><ol><li><a href="https://developers.kakao.com/" target="_blank" rel="noopener noreferrer">카카오디벨로퍼스</a>에서 앱을 만들고 JavaScript 키를 확인합니다.</li><li>JavaScript SDK 도메인과 지도 서비스의 웹 도메인 설정에 아래 접속 주소를 등록합니다.<code id="current-origin"></code></li><li>카카오맵 사용 설정·권한도 확인합니다. 휴대폰 접속 주소가 다르면 그 주소도 등록합니다.</li></ol></div><p id="settings-status" role="status"></p><button class="primary" type="submit">저장하고 연결하기</button></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
