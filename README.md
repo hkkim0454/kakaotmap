@@ -79,3 +79,9 @@ TMAP 호출 형식은 기기·앱 버전에 따라 호환성 확인이 필요합
 - https://developers.kakao.com/docs/ko/javascript/download
 - https://apis.map.kakao.com/web/documentation/
 - https://tmapapi.tmapmobility.com/main.html
+
+## 연결 설정 잠금과 화면 배치
+
+연결 설정을 열 때만 비밀번호를 확인합니다. 검색·지도·내비 실행·목적지 공유는 비밀번호 없이 이용합니다. 설정을 닫으면 다시 잠기며 빈 키로 기존 값을 덮어쓸 수 없습니다. 비밀번호 원문은 저장하지 않고 PBKDF2 검증값을 사용합니다. 이 잠금은 정적 사이트의 실수 방지용이며 서버 인증이 아닙니다. 브라우저 설정 변경은 해당 브라우저에만 적용됩니다.
+
+900px 이상 화면은 왼쪽 검색 결과, 오른쪽 목적지 지도와 내비 버튼을 표시합니다. 휴대폰에서는 세로로 배치합니다.
