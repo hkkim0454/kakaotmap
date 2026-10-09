@@ -7,6 +7,9 @@ import { networkInterfaces } from 'node:os';
 const publicDirectory = new URL('./public/', import.meta.url);
 const assets = new Map([['/','index.html'],['/index.html','index.html'],['/styles.css','styles.css'],['/app.js','app.js'],['/navigation.js','navigation.js']]);
 const types = {html:'text/html; charset=utf-8',css:'text/css; charset=utf-8',js:'text/javascript; charset=utf-8'};
+assets.set('/share.js','share.js');
+assets.set('/fonts/PretendardVariable.woff2','fonts/PretendardVariable.woff2');
+types.woff2 = 'font/woff2';
 export function createAppServer({kakaoJavascriptKey = process.env.KAKAO_JAVASCRIPT_KEY || ''} = {}) {
   return createServer(async (req,res) => {
     res.setHeader('X-Content-Type-Options','nosniff');
@@ -16,8 +19,12 @@ export function createAppServer({kakaoJavascriptKey = process.env.KAKAO_JAVASCRI
     let path;
     try { path = new URL(req.url,'http://localhost').pathname; } catch { res.writeHead(400); res.end(); return; }
     if (path === '/config.json') {
+      let publicKey = kakaoJavascriptKey;
+      if (!publicKey) {
+        try { publicKey = JSON.parse(await readFile(new URL('config.json',publicDirectory),'utf8')).kakaoJavascriptKey || ''; } catch { /* Optional public configuration. */ }
+      }
       res.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});
-      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({kakaoJavascriptKey})); return;
+      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({kakaoJavascriptKey:publicKey})); return;
     }
     const asset = assets.get(path);
     if (!asset) { res.writeHead(404); res.end('Not found'); return; }

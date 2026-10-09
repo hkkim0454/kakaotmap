@@ -1,4 +1,5 @@
 import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigation.js';
+import { createShareUrl, readSharedPlace } from './share.js';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -6,6 +7,7 @@ const sample = { name: '현대백화점 판교점', address: '경기도 성남�
 const state = { selected: null, map: null, marker: null, mapsReady: false, naviReady: false, searchId: 0, pagination: null, rows: [] };
 const storage = { get() { try { return localStorage.getItem('barogil-kakao-key') || ''; } catch { return ''; } }, set(key) { localStorage.setItem('barogil-kakao-key', key); } };
 let toastTimer;
+let sharedLinkError = '';
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 4000); }
 function notice(message) { $('notice').textContent = message; }
 function loadScript(src) {
@@ -44,6 +46,8 @@ function drawMap() {
 window.addEventListener('resize', () => drawMap());
 function selectPlace(place, example = false) {
   state.selected = place;
+  document.title = `${place.name} · 바로길`;
+  $('share-fallback').hidden = true;
   $('destination').hidden = false; $('empty-state').hidden = true; $('launch-help').hidden = true;
   $('place-name').textContent = place.name;
   $('place-address').textContent = place.address;
@@ -51,6 +55,32 @@ function selectPlace(place, example = false) {
   document.querySelectorAll('.result').forEach(button => button.classList.toggle('selected', button.dataset.place === `${place.name}|${place.x}|${place.y}`));
   drawMap();
 }
+function shareLink() { return createShareUrl(location.href,state.selected); }
+async function copyText(text) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  const area = document.createElement('textarea'); area.value = text;
+  area.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.append(area); area.select();
+  const copied = document.execCommand('copy'); area.remove();
+  if (!copied) throw new Error('copy');
+}
+function showShareFallback(url) {
+  $('share-fallback').hidden = false; $('share-url').value = url;
+  $('share-url').focus(); $('share-url').select();
+}
+$('share-button').onclick = async () => {
+  if (!state.selected) return;
+  const url = shareLink();
+  try {
+    if (navigator.share) await navigator.share({title:state.selected.name,text:`${state.selected.name} 길 안내`,url});
+    else { await copyText(url); toast('목적지 링크를 복사했습니다. 원하는 사람에게 보내세요.'); }
+  } catch (error) { if (error.name !== 'AbortError') showShareFallback(url); }
+};
+$('copy-link').onclick = async () => {
+  if (!state.selected) return;
+  const url = shareLink();
+  try { await copyText(url); toast('목적지 링크를 복사했습니다.'); }
+  catch { showShareFallback(url); }
+};
 $('sample-button').onclick = () => { selectPlace(sample, true); $('destination').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
 $('copy-address').onclick = async () => {
   if (!state.selected) return;
@@ -153,7 +183,7 @@ $('kakao-button').onclick = () => {
 async function initialize() {
   try { const response = await fetch('./config.json'); if (response.ok) state.configKey = (await response.json()).kakaoJavascriptKey; } catch { /* Browser setting is also supported. */ }
   const key = storage.get() || state.configKey;
-  if (!key) { notice('처음 사용하시나요? 연결 설정을 완료하면 장소 검색과 카카오내비를 사용할 수 있습니다.'); return; }
+  if (!key) { notice(sharedLinkError || '처음 사용하시나요? 연결 설정을 완료하면 장소 검색과 카카오내비를 사용할 수 있습니다.'); return; }
   notice('검색과 내비 서비스를 연결하고 있습니다…');
   await Promise.allSettled([
     (async () => {
@@ -167,6 +197,15 @@ async function initialize() {
     })()
   ]);
   const failures = [!state.mapsReady && '검색·지도',!state.naviReady && '카카오내비'].filter(Boolean);
-  notice(failures.length ? `${failures.join(', ')} 연결을 확인해 주세요. 연결 설정의 JavaScript 키, 현재 접속 도메인, 카카오맵 사용 권한을 확인한 뒤 새로고침해 주세요.` : '연결되었습니다. 주소나 장소명을 검색해 주세요.');
+  notice(sharedLinkError || (failures.length ? `${failures.join(', ')} 연결을 확인해 주세요. 연결 설정의 JavaScript 키, 현재 접속 도메인, 카카오맵 사용 권한을 확인한 뒤 새로고침해 주세요.` : ''));
 }
+try {
+  const shared = readSharedPlace(location.href);
+  if (shared) {
+    selectPlace(shared);
+    $('destination-label').textContent = '공유받은 목적지';
+    document.title = `${shared.name} · 바로길`;
+    document.body.classList.add('shared-view');
+  }
+} catch { sharedLinkError = '목적지 링크가 올바르지 않습니다. 주소나 장소를 다시 검색해 주세요.'; notice(sharedLinkError); }
 initialize();
