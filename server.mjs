@@ -8,6 +8,9 @@ const publicDirectory = new URL('./public/', import.meta.url);
 const assets = new Map([['/','index.html'],['/index.html','index.html'],['/styles.css','styles.css'],['/app.js','app.js'],['/navigation.js','navigation.js']]);
 const types = {html:'text/html; charset=utf-8',css:'text/css; charset=utf-8',js:'text/javascript; charset=utf-8'};
 assets.set('/share.js','share.js');
+assets.set('/settings-lock.js','settings-lock.js');
+assets.set('/settings-lock.json','settings-lock.json');
+types.json = 'application/json; charset=utf-8';
 assets.set('/fonts/PretendardVariable.woff2','fonts/PretendardVariable.woff2');
 types.woff2 = 'font/woff2';
 export function createAppServer({kakaoJavascriptKey = process.env.KAKAO_JAVASCRIPT_KEY || ''} = {}) {

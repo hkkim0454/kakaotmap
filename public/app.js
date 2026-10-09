@@ -1,5 +1,6 @@
 import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigation.js';
 import { createShareUrl, readSharedPlace } from './share.js';
+import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -20,13 +21,47 @@ function loadScript(src) {
     document.head.append(script);
   });
 }
-function openSettings() { $('api-key').value = storage.get() || state.configKey || ''; $('settings').showModal(); }
+let settingsUnlocked = false;
+let unlockAttempt = 0;
+function openSettings() {
+  settingsUnlocked = false;
+  $('settings-password').value = '';
+  $('unlock-status').textContent = '';
+  $('settings-unlock').showModal();
+  $('settings-password').focus();
+}
 $('settings-open').onclick = openSettings;
 $('settings-close').onclick = () => $('settings').close();
+$('settings').onclose = () => { settingsUnlocked = false; $('api-key').value = ''; };
+$('unlock-close').onclick = () => $('settings-unlock').close();
+$('settings-unlock').onclose = () => { unlockAttempt++; $('settings-password').value = ''; $('unlock-submit').disabled = false; };
+$('unlock-form').onsubmit = async event => {
+  event.preventDefault();
+  const attempt = ++unlockAttempt;
+  const password = $('settings-password').value;
+  $('unlock-submit').disabled = true;
+  $('unlock-status').textContent = '확인하고 있습니다…';
+  try {
+    const response = await fetch('./settings-lock.json',{cache:'no-store'});
+    if (!response.ok) throw new Error('config');
+    const matches = await verifySettingsPassword(password,await response.json());
+    if (attempt !== unlockAttempt) return;
+    if (!matches) { $('unlock-status').textContent = '비밀번호가 맞지 않습니다.'; $('settings-password').value = ''; $('settings-password').focus(); return; }
+    $('settings-unlock').close();
+    settingsUnlocked = true;
+    $('api-key').value = storage.get() || state.configKey || '';
+    $('settings-status').textContent = '';
+    $('settings').showModal();
+  } catch { if (attempt === unlockAttempt) $('unlock-status').textContent = '설정을 열 수 없습니다. 인터넷 연결을 확인하고 HTTPS 주소에서 다시 시도해 주세요.'; }
+  finally { if (attempt === unlockAttempt) $('unlock-submit').disabled = false; }
+};
 $('current-origin').textContent = location.origin;
 $('settings-form').onsubmit = event => {
   event.preventDefault();
-  try { storage.set($('api-key').value.trim()); location.reload(); }
+  if (!settingsUnlocked) { $('settings-status').textContent = '비밀번호 확인 후 변경할 수 있습니다.'; return; }
+  const key = $('api-key').value.trim();
+  if (!validJavascriptKey(key)) { $('settings-status').textContent = '기존 키를 유지합니다. 올바른 32자리 JavaScript 키를 입력해 주세요.'; return; }
+  try { storage.set(key); location.reload(); }
   catch { $('settings-status').textContent = '브라우저 저장 공간을 사용할 수 없습니다. 사이트의 저장 권한을 확인해 주세요.'; }
 };
 
@@ -81,7 +116,10 @@ $('copy-link').onclick = async () => {
   try { await copyText(url); toast('목적지 링크를 복사했습니다.'); }
   catch { showShareFallback(url); }
 };
-$('sample-button').onclick = () => { selectPlace(sample, true); $('destination').scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+function revealDestination() {
+  if (!window.matchMedia?.('(min-width: 900px)').matches) $('destination').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+$('sample-button').onclick = () => { selectPlace(sample, true); revealDestination(); };
 $('copy-address').onclick = async () => {
   if (!state.selected) return;
   try {
@@ -108,7 +146,7 @@ function renderResults() {
     const address = document.createElement('small'); address.textContent = `${place.category} · ${place.address}`;
     const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '↗'; arrow.setAttribute('aria-hidden','true');
     body.append(name,address); button.append(pin,body,arrow);
-    button.onclick = () => { selectPlace(place); $('destination').scrollIntoView({behavior:'smooth',block:'start'}); };
+    button.onclick = () => { selectPlace(place); revealDestination(); };
     $('results').append(button);
   }
   $('more-results').hidden = !state.pagination?.hasNextPage;
@@ -152,7 +190,7 @@ let lastQuery = '';
 $('search-form').onsubmit = event => {
   event.preventDefault(); const query = $('query').value.trim();
   if (!query) return;
-  if (!state.mapsReady) { notice('검색 연결이 필요합니다. 연결 설정에서 JavaScript 키와 도메인을 확인해 주세요.'); openSettings(); return; }
+  if (!state.mapsReady) { notice('검색 서비스가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요. 계속 안 되면 관리자에게 연결 설정 확인을 요청해 주세요.'); return; }
   lastQuery = query; search(query);
 };
 $('more-results').onclick = () => search(lastQuery, (state.pagination?.current || 1) + 1);
@@ -175,7 +213,7 @@ $('tmap-button').onclick = () => {
   catch { toast('앱을 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
 };
 $('kakao-button').onclick = () => {
-  if (!state.naviReady) { notice('카카오내비 연결을 확인해 주세요. 키를 설정했다면 페이지를 새로고침해 주세요.'); openSettings(); return; }
+  if (!state.naviReady) { toast('카카오내비 연결을 준비 중입니다. 잠시 후 다시 눌러 주세요.'); return; }
   try { if (prepareLaunch('kakao')) Kakao.Navi.start(kakaoDestination(state.selected)); }
   catch { $('launch-message').textContent = '카카오내비를 열지 못했습니다. 연결 설정을 확인해 주세요.'; }
 };
