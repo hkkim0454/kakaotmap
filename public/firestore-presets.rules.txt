@@ -6,9 +6,9 @@ service cloud.firestore {
       allow read, write: if request.time < timestamp.date(2026, 8, 7);
     }
 
-    // Only the two public Barogil slots can be read or changed.
+    // Only the eight public Barogil slots can be read or changed.
     match /barogil_presets/{slot} {
-      function validSlot() { return slot in ['1', '2']; }
+      function validSlot() { return slot in ['1', '2', '3', '4', '5', '6', '7', '8']; }
       function validPlace() {
         let d = request.resource.data;
         return d.keys().hasAll(['name', 'address', 'x', 'y'])

@@ -10,7 +10,7 @@ export function createPresetStore(config, request = fetch) {
   if (!/^[a-z0-9-]+$/.test(config.projectId) || !config.apiKey) throw new Error('프리셋 연결 설정을 확인해 주세요.');
   const base = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/barogil_presets/`;
   async function send(slot,method='GET',body,version) {
-    if (slot !== 1 && slot !== 2) throw new Error('목적지 1 또는 2를 선택해 주세요.');
+    if (!Number.isInteger(slot) || slot < 1 || slot > 8) throw new Error('목적지 1~8을 선택해 주세요.');
     const url = new URL(base+slot);
     url.searchParams.set('key',config.apiKey);
     if (version) url.searchParams.set('currentDocument.updateTime',version);
