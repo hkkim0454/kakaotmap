@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createShareUrl, readSharedPlace } from '../public/share.js';
 
-test('recipient restores shared destination and copies the same link without searching or launching an app',async t => {
+for (const device of ['Android','iPhone']) test(device + ' restores shared destination and launches the selected route synchronously',async t => {
   const place = {name:'서울역 & 출구',address:'서울 중구 한강대로 405',x:126.972,y:37.556};
   const href = createShareUrl('https://hkkim0454.github.io/kakaotmap/',place);
   const elements = new Map();
@@ -13,7 +13,7 @@ test('recipient restores shared destination and copies the same link without sea
     document:{getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},querySelectorAll(){return [];},body:{classList:{add(name){classes.add(name);}}}},
     window:{location:{href},addEventListener(){},isSecureContext:true},
     location:{href,origin:'https://hkkim0454.github.io'},
-    navigator:{userAgent:'Android',maxTouchPoints:1,clipboard:{async writeText(value){copied=value;}}},
+    navigator:{userAgent:device,maxTouchPoints:1,clipboard:{async writeText(value){copied=value;}}},
     localStorage:{getItem(){return ''; }},
     fetch:async()=>({ok:true,json:async()=>({kakaoJavascriptKey:''})})
   };
@@ -23,7 +23,7 @@ test('recipient restores shared destination and copies the same link without sea
     Object.defineProperty(globalThis,name,{value,configurable:true,writable:true});
   }
   t.after(()=>{for(const [name,descriptor] of descriptors){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}});
-  await import('../public/app.js');
+  await import('../public/app.js?device=' + device);
   assert.equal(elements.get('place-name').textContent,place.name);
   assert.equal(elements.get('place-address').textContent,place.address);
   assert.equal(elements.get('destination').hidden,false);
@@ -35,7 +35,11 @@ test('recipient restores shared destination and copies the same link without sea
   assert.equal(elements.get('query').value,place.name);
   assert.equal(elements.get('route-destination-input').value,place.name);
   elements.get('route-tmap-launch').onclick();
-  assert.match(window.location.href,/^intent:\/\/route\?/);
+  const launch = window.location.href;
+  assert.match(launch,device === 'iPhone' ? /^tmap:\/\/route\?/ : /^intent:\/\/route\?/);
+  const params = new URL(launch).searchParams;
+  assert.equal(params.get(device === 'iPhone' ? 'rGoName' : 'goalname'),place.name);
+  assert.equal(params.get(device === 'iPhone' ? 'rGoX' : 'goalx'),String(place.x));
   // Toast timers run after teardown; let them finish while the DOM fixture is present.
   await new Promise(resolve=>setTimeout(resolve,4100));
 });

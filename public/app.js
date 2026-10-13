@@ -105,7 +105,7 @@ function selectPlace(place, example = false, currentLocation = false) {
   presets?.selectionChanged();
   document.title = `${place.name} · 바로길`;
   $('share-fallback').hidden = true;
-  $('destination').hidden = false; $('empty-state').hidden = true; $('launch-help').hidden = true;
+  $('destination').hidden = false; $('empty-state').hidden = true;
   $('place-name').textContent = place.name;
   $('query').value = place.name;
   $('place-address').textContent = place.address;
@@ -229,27 +229,20 @@ $('search-form').onsubmit = event => {
 };
 $('more-results').onclick = () => search(lastQuery, (state.pagination?.current || 1) + 1);
 
-const stores = {
-  tmap: { ios:'https://apps.apple.com/kr/app/id431589174',android:'https://play.google.com/store/apps/details?id=com.skt.tmap.ku' },
-  kakao: { ios:'https://apps.apple.com/kr/app/id417698849',android:'https://play.google.com/store/apps/details?id=com.locnall.KimGiSa' }
-};
-function prepareLaunch(app) {
+function prepareLaunch() {
   if (!state.selected) return false;
-  if (os === 'desktop') { toast('스마트폰에서 이 페이지를 열고 내비 버튼을 눌러 주세요.'); return false; }
-  $('launch-help').hidden = false;
-  $('launch-message').textContent = `${app === 'tmap' ? 'TMAP' : '카카오내비'} 앱 열기를 요청했습니다.`;
-  $('store-link').href = stores[app][os];
+  if (os === 'desktop') { toast('스마트폰에서 이 페이지를 열고 소요시간을 눌러 주세요.'); return false; }
   return true;
 }
 // Keep app launches synchronous inside the user gesture; do not await network work here.
 $('route-tmap-launch').onclick = () => {
-  try { if (prepareLaunch('tmap')) window.location.href = tmapUrl(state.selected,os); }
+  try { if (prepareLaunch()) window.location.href = tmapUrl(state.selected,os); }
   catch { toast('앱을 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
 };
 $('route-kakao-launch').onclick = () => {
   if (!state.naviReady) { toast('카카오내비 연결을 준비 중입니다. 잠시 후 다시 눌러 주세요.'); return; }
-  try { if (prepareLaunch('kakao')) Kakao.Navi.start(kakaoDestination(state.selected)); }
-  catch { $('launch-message').textContent = '카카오내비를 열지 못했습니다. 연결 설정을 확인해 주세요.'; }
+  try { if (prepareLaunch()) Kakao.Navi.start(kakaoDestination(state.selected)); }
+  catch { toast('카카오내비를 열지 못했습니다. 잠시 후 다시 눌러 주세요.'); }
 };
 
 async function initialize() {

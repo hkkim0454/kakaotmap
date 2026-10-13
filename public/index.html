@@ -8,8 +8,8 @@
   <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
   <title>바로길 · 원하는 내비로 바로 출발</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20261013.8">
-  <script type="module" src="./app.js?v=20261013.8"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261013.9">
+  <script type="module" src="./app.js?v=20261013.9"></script>
 </head>
 <body>
   <div class="bg-orbs" aria-hidden="true"></div>
@@ -60,12 +60,11 @@
         <p class="route-note">일반 승용차 기준 예상값입니다. 앱에서는 현재 위치에서 경로를 다시 계산하므로 결과가 달라질 수 있습니다.</p>
       </section>
       <div class="share-section"><div><strong>함께 갈 사람에게 보내세요</strong><p>같은 목적지, 각자 원하는 내비로.</p></div><div class="share-actions"><button id="share-button" class="primary"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg>목적지 링크 공유</button><button id="copy-link" class="secondary">링크 복사</button></div><div id="share-fallback" hidden><label for="share-url">아래 링크를 길게 눌러 복사하세요.</label><input id="share-url" readonly type="text" aria-label="목적지 공유 링크"></div></div>
-      <div id="launch-help" class="launch-help" hidden role="status"><strong id="launch-message"></strong><p>앱이 열리지 않으면 설치 여부를 확인해 주세요. 카카오톡 안에서는 메뉴에서 기본 브라우저로 열어 다시 눌러 주세요.</p><a id="store-link" class="secondary" target="_blank" rel="noopener noreferrer">앱 설치 페이지</a></div>
     </section>
     <section id="empty-state" class="empty-state"><div class="empty-illustration" aria-hidden="true"><svg viewBox="0 0 200 130"><path class="route-line" d="M35 99h61c25 0 25-40 49-40h24"/><circle class="route-start" cx="35" cy="99" r="6"/><rect class="map-tile" x="68" y="18" width="70" height="70" rx="22" transform="rotate(-10 103 53)"/><path class="map-pin" d="M103 32c-10 0-18 7-18 17 0 13 18 28 18 28s18-15 18-28c0-10-8-17-18-17Z"/><circle cx="103" cy="49" r="6" fill="white"/><path class="route-arrow" d="m160 51 9 8-9 8"/></svg></div><h2>다음 목적지는 어디인가요?</h2><p>지도에서 확인하고, 원하는 내비로 출발하세요.<br>목적지 링크로 함께 갈 사람에게 공유할 수도 있어요.</p><div class="app-tags" aria-label="지원 내비"><span><i class="tmap-dot"></i>TMAP</span><span><i class="kakao-dot"></i>카카오내비</span></div></section>
     </div>
     </div>
-    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.13.8</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
+    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.13.9</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
   </main>
   <dialog id="settings-unlock" aria-labelledby="unlock-title"><form id="unlock-form"><div class="dialog-heading"><h2 id="unlock-title">연결 설정 잠금 해제</h2><button type="button" id="unlock-close" class="text-button" aria-label="닫기">✕</button></div><p>JavaScript 키를 변경하려면 설정 비밀번호를 입력해 주세요.</p><label for="settings-password">설정 비밀번호</label><input id="settings-password" type="password" autocomplete="current-password" required><p id="unlock-status" role="status" aria-live="polite"></p><button id="unlock-submit" class="primary" type="submit">설정 열기</button></form></dialog>
   <dialog id="settings"><form id="settings-form"><div class="dialog-heading"><h2>카카오 연결 설정</h2><button type="button" id="settings-close" class="text-button" aria-label="설정 닫기">✕</button></div><p>검색, 지도와 카카오내비를 사용하려면 카카오 개발자 앱의 <strong>JavaScript 키</strong>를 입력해 주세요.</p><label for="api-key">JavaScript 키</label><input id="api-key" required autocomplete="off" spellcheck="false" placeholder="JavaScript 키 입력" pattern="[a-fA-F0-9]{32}" title="32자리 JavaScript 키를 입력해 주세요."><p class="field-help">이 브라우저에 저장됩니다. REST API 키나 Admin 키는 입력하지 마세요.</p><div class="setup-instructions"><strong>처음 연결할 때</strong><ol><li><a href="https://developers.kakao.com/" target="_blank" rel="noopener noreferrer">카카오디벨로퍼스</a>에서 앱을 만들고 JavaScript 키를 확인합니다.</li><li>JavaScript SDK 도메인과 지도 서비스의 웹 도메인 설정에 아래 접속 주소를 등록합니다.<code id="current-origin"></code></li><li>카카오맵 사용 설정·권한도 확인합니다. 휴대폰 접속 주소가 다르면 그 주소도 등록합니다.</li></ol></div><p id="settings-status" role="status"></p><button class="primary" type="submit">저장하고 연결하기</button></form></dialog>
