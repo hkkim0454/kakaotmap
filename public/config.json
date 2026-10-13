@@ -1,3 +1,7 @@
 {
-  "kakaoJavascriptKey": "ac5ac13631ac7d2bd4b3ea42e861846f"
+  "kakaoJavascriptKey": "ac5ac13631ac7d2bd4b3ea42e861846f",
+  "firebase": {
+    "projectId": "svt-led-calculator",
+    "apiKey": "AIzaSyBYxE-Y4l3tpSLgJua91JdJ0HVDOsLv67E"
+  }
 }
