@@ -136,7 +136,13 @@ $('copy-link').onclick = async () => {
   catch { showShareFallback(url); }
 };
 function revealDestination() {
-  if (!window.matchMedia?.('(min-width: 900px)').matches) $('destination').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  $('query').blur?.();
+  $('place-name').focus?.({preventScroll:true});
+  if (!window.matchMedia?.('(min-width: 900px)').matches) {
+    // Let the keyboard/focus change settle before positioning the selected place.
+    const reveal = () => $('destination').scrollIntoView({ behavior: 'auto', block: 'start' });
+    if (window.requestAnimationFrame) window.requestAnimationFrame(reveal); else reveal();
+  }
 }
 $('sample-button').onclick = () => { selectPlace(sample, true); revealDestination(); };
 $('copy-address').onclick = async () => {
@@ -158,7 +164,7 @@ function renderResults() {
   $('results-section').hidden = false;
   $('result-count').textContent = `${state.rows.length}곳`;
   for (const place of state.rows) {
-    const button = document.createElement('button'); button.className = 'result';
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'result';
     button.dataset.place = `${place.name}|${place.x}|${place.y}`;
     const pin = document.createElement('span'); pin.className = 'result-dot'; pin.textContent = '⌖'; pin.setAttribute('aria-hidden','true');
     const body = document.createElement('span'); const name = document.createElement('strong'); name.textContent = place.name;
@@ -212,6 +218,7 @@ $('search-form').onsubmit = event => {
   event.preventDefault(); const query = $('query').value.trim();
   if (!query) return;
   if (!state.mapsReady) { notice('검색 서비스가 준비되지 않았습니다. 잠시 후 다시 시도해 주세요. 계속 안 되면 관리자에게 연결 설정 확인을 요청해 주세요.'); return; }
+  $('query').blur?.();
   lastQuery = query; search(query);
 };
 $('more-results').onclick = () => search(lastQuery, (state.pagination?.current || 1) + 1);
@@ -241,7 +248,7 @@ $('kakao-button').onclick = () => {
 
 async function initialize() {
   try {
-    const response = await fetch('./config.json');
+    const response = await fetch('./config.json', {cache:'no-store'});
     if (response.ok) {
       const config = await response.json();
       state.configKey = config.kakaoJavascriptKey;
