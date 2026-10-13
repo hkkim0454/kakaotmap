@@ -9,7 +9,7 @@ test('serve only public assets; never expose private files', async t => {
   const origin = `http://127.0.0.1:${server.address().port}`;
   const home = await fetch(origin);
   assert.equal(home.status,200);
-  assert.match(await home.text(),/TMAP 길 안내/);
+  assert.match(await home.text(),/TMAP 추천/);
   for (const path of ['/.env','/.git/config','/server.mjs','/README.md','/%2e%2e/.env','/..%5c.env']) {
     assert.equal((await fetch(origin+path)).status,404,path);
   }

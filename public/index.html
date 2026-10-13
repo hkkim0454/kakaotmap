@@ -8,8 +8,8 @@
   <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
   <title>바로길 · 원하는 내비로 바로 출발</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20261013.7">
-  <script type="module" src="./app.js?v=20261013.7"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261013.8">
+  <script type="module" src="./app.js?v=20261013.8"></script>
 </head>
 <body>
   <div class="bg-orbs" aria-hidden="true"></div>
@@ -45,19 +45,18 @@
       <h2 id="place-name" tabindex="-1"></h2><p id="place-address"></p>
       <div class="map-wrap"><div id="map" aria-label="목적지 지도"></div><div id="map-placeholder" class="map-placeholder"><span class="pin" aria-hidden="true">⌖</span><strong>목적지를 지도에서 확인하세요</strong><p>연결 설정 후 지도가 표시됩니다.</p></div></div>
       <section id="route-panel" class="route-panel" aria-labelledby="route-title">
-        <div class="route-heading"><h3 id="route-title">출발 전, 경로 비교</h3><span>TMAP · 카카오</span></div>
+        <div class="route-heading"><h3 id="route-title">현재 추천 경로 · 예상 소요시간</h3><span>TMAP · 카카오</span></div>
         <div class="route-destination" aria-live="polite"><span>도착지 · 선택한 목적지 자동 입력</span><label id="route-destination-label" class="sr-only" for="route-destination-input">목적지를 선택해주세요</label><div class="route-destination-field"><input id="route-destination-input" readonly placeholder="목적지를 선택해주세요" aria-label="선택한 도착지"><button id="route-destination-change" class="secondary" type="button">변경</button></div><small id="route-destination-address"></small></div>
         <div class="route-origin-row"><strong id="route-origin-label">출발지를 선택해주세요</strong><button type="button" id="route-location" class="secondary">⌖ 현재 위치</button></div>
         <form id="route-origin-form" class="route-origin-form"><label for="route-origin-query" class="sr-only">출발지 주소 또는 장소명</label><input id="route-origin-query" type="search" maxlength="100" placeholder="또는 출발지 검색 (예: 서울역)" required><button type="submit" class="secondary">검색</button></form>
         <div id="route-origin-results" class="route-origin-results" aria-label="출발지 검색 결과"></div>
-        <p class="route-note">도착지는 위에서 선택한 장소입니다. 현재 위치를 누르거나 출발지를 검색한 뒤 비교해 주세요.</p>
+        <p class="route-note">목적지를 선택하면 현재 위치 기준으로 시간을 조회합니다. 표시된 소요시간을 누르면 해당 내비 앱이 실행됩니다.</p>
         <button id="route-compare" type="button" class="primary route-compare" disabled>경로 비교하기</button>
         <p id="route-status" class="route-status" role="status" aria-live="polite"></p>
         <div id="route-results" class="route-results" hidden>
-          <button type="button" id="route-tmap-launch" class="route-summary"><span class="route-provider">TMAP 추천</span><strong id="route-tmap-time"></strong><span id="route-tmap-detail"></span><span class="route-launch-caption">TMAP으로 출발 ↗</span></button>
-          <button type="button" id="route-kakao-launch" class="route-summary"><span class="route-provider">카카오 추천</span><strong id="route-kakao-time"></strong><span id="route-kakao-detail"></span><span class="route-launch-caption">카카오내비로 출발 ↗</span></button>
+          <button type="button" id="route-tmap-launch" class="route-summary" disabled><span class="route-provider">TMAP 추천</span><strong id="route-tmap-time"></strong><span id="route-tmap-detail"></span><span class="route-launch-caption">시간을 눌러 TMAP 실행 ↗</span></button>
+          <button type="button" id="route-kakao-launch" class="route-summary"><span class="route-provider">카카오 추천</span><strong id="route-kakao-time"></strong><span id="route-kakao-detail"></span><span class="route-launch-caption">시간을 눌러 카카오내비 실행 ↗</span></button>
         </div>
-        <div id="route-direct" class="route-direct"><p class="route-note">비교 없이 바로 길 안내</p><div class="route-results"><button id="tmap-button" type="button" class="secondary">TMAP 길 안내 ↗</button><button id="kakao-button" type="button" class="secondary">카카오내비로 출발 ↗</button></div></div>
         <p class="route-note">일반 승용차 기준 예상값입니다. 앱에서는 현재 위치에서 경로를 다시 계산하므로 결과가 달라질 수 있습니다.</p>
       </section>
       <div class="share-section"><div><strong>함께 갈 사람에게 보내세요</strong><p>같은 목적지, 각자 원하는 내비로.</p></div><div class="share-actions"><button id="share-button" class="primary"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg>목적지 링크 공유</button><button id="copy-link" class="secondary">링크 복사</button></div><div id="share-fallback" hidden><label for="share-url">아래 링크를 길게 눌러 복사하세요.</label><input id="share-url" readonly type="text" aria-label="목적지 공유 링크"></div></div>
@@ -66,7 +65,7 @@
     <section id="empty-state" class="empty-state"><div class="empty-illustration" aria-hidden="true"><svg viewBox="0 0 200 130"><path class="route-line" d="M35 99h61c25 0 25-40 49-40h24"/><circle class="route-start" cx="35" cy="99" r="6"/><rect class="map-tile" x="68" y="18" width="70" height="70" rx="22" transform="rotate(-10 103 53)"/><path class="map-pin" d="M103 32c-10 0-18 7-18 17 0 13 18 28 18 28s18-15 18-28c0-10-8-17-18-17Z"/><circle cx="103" cy="49" r="6" fill="white"/><path class="route-arrow" d="m160 51 9 8-9 8"/></svg></div><h2>다음 목적지는 어디인가요?</h2><p>지도에서 확인하고, 원하는 내비로 출발하세요.<br>목적지 링크로 함께 갈 사람에게 공유할 수도 있어요.</p><div class="app-tags" aria-label="지원 내비"><span><i class="tmap-dot"></i>TMAP</span><span><i class="kakao-dot"></i>카카오내비</span></div></section>
     </div>
     </div>
-    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.13.7</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
+    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.13.8</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
   </main>
   <dialog id="settings-unlock" aria-labelledby="unlock-title"><form id="unlock-form"><div class="dialog-heading"><h2 id="unlock-title">연결 설정 잠금 해제</h2><button type="button" id="unlock-close" class="text-button" aria-label="닫기">✕</button></div><p>JavaScript 키를 변경하려면 설정 비밀번호를 입력해 주세요.</p><label for="settings-password">설정 비밀번호</label><input id="settings-password" type="password" autocomplete="current-password" required><p id="unlock-status" role="status" aria-live="polite"></p><button id="unlock-submit" class="primary" type="submit">설정 열기</button></form></dialog>
   <dialog id="settings"><form id="settings-form"><div class="dialog-heading"><h2>카카오 연결 설정</h2><button type="button" id="settings-close" class="text-button" aria-label="설정 닫기">✕</button></div><p>검색, 지도와 카카오내비를 사용하려면 카카오 개발자 앱의 <strong>JavaScript 키</strong>를 입력해 주세요.</p><label for="api-key">JavaScript 키</label><input id="api-key" required autocomplete="off" spellcheck="false" placeholder="JavaScript 키 입력" pattern="[a-fA-F0-9]{32}" title="32자리 JavaScript 키를 입력해 주세요."><p class="field-help">이 브라우저에 저장됩니다. REST API 키나 Admin 키는 입력하지 마세요.</p><div class="setup-instructions"><strong>처음 연결할 때</strong><ol><li><a href="https://developers.kakao.com/" target="_blank" rel="noopener noreferrer">카카오디벨로퍼스</a>에서 앱을 만들고 JavaScript 키를 확인합니다.</li><li>JavaScript SDK 도메인과 지도 서비스의 웹 도메인 설정에 아래 접속 주소를 등록합니다.<code id="current-origin"></code></li><li>카카오맵 사용 설정·권한도 확인합니다. 휴대폰 접속 주소가 다르면 그 주소도 등록합니다.</li></ol></div><p id="settings-status" role="status"></p><button class="primary" type="submit">저장하고 연결하기</button></form></dialog>
