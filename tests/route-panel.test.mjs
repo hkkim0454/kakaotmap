@@ -42,19 +42,14 @@ test('preset selection replaces a searched origin with current location',async()
  f.change({autoCompare:true,currentLocation:true});
  await new Promise(resolve=>setTimeout(resolve,0));
  assert.equal(f.get('route-origin-query').value,'현재 위치');
- assert.equal(f.get('route-destination-input').value,'다른 곳');
  assert.equal(f.get('route-tmap-time').textContent,'27분');
 });
 test('selected destination is displayed automatically while preserving origin without automatic requests',async()=>{
  let body, calls=0;
  const f=fixture(async(url,options)=>{calls++;body=JSON.parse(options.body);return good();});
- assert.equal(f.get('route-destination-label').textContent,'강남역');
- assert.equal(f.get('route-destination-input').value,'강남역');
  await f.get('route-location').onclick();
  const originLabel=f.get('route-origin-label').textContent;
  f.change();
- assert.equal(f.get('route-destination-label').textContent,'다른 곳');
- assert.equal(f.get('route-destination-input').value,'다른 곳');
  assert.equal(f.get('route-origin-label').textContent,originLabel);
  assert.equal(calls,0);
  await f.get('route-compare').onclick();

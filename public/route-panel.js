@@ -1,21 +1,18 @@
 const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
-export function mountRoutePanel({ document, navigator, getDestination, searchPlaces, fetcher = fetch }) {
+export function mountRoutePanel({ document, navigator, getDestination, searchPlaces, onOriginChanged = () => {}, fetcher = fetch }) {
   const $ = id => document.getElementById(id);
   let endpoint = '', origin = null, generation = 0, originRequest = 0, controller, automatic = false;
   function reset() {
     generation++; controller?.abort();
     const destination = getDestination();
-    $('route-destination-label').textContent = destination?.name || '목적지를 선택해주세요';
-    $('route-destination-input').value = destination?.name || '';
     for (const provider of ['tmap','kakao']) {
       $('route-' + provider + '-launch').disabled = true;
       $('route-' + provider + '-time').textContent = '시간 확인 전';
       $('route-' + provider + '-detail').textContent = '';
     }
-    $('route-destination-address').textContent = destination?.address || '';
     $('route-results').hidden = true;
     $('route-status').textContent = '';
-    $('route-compare').textContent = '경로 비교하기';
+    $('route-compare').textContent = '새로고침 ↻';
     $('route-compare').disabled = !endpoint || !origin || !getDestination();
   }
   function selectOrigin(place) {
@@ -23,10 +20,13 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     $('route-origin-label').textContent = `출발: ${place.name}`;
     $('route-origin-query').value = place.name;
     $('route-origin-results').replaceChildren();
+    $('origin-options').open = false;
+    onOriginChanged(place);
     if (automatic) $('route-compare').onclick();
   }
   $('route-location').onclick = () => {
     const request = ++originRequest; origin = null; reset();
+    onOriginChanged(null);
     $('route-origin-query').value = '';
     $('route-origin-label').textContent = '출발지를 선택해주세요';
     $('route-origin-results').replaceChildren();
@@ -36,7 +36,10 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
       if (request !== originRequest) return;
       selectOrigin({ name: '현재 위치', x: position.coords.longitude, y: position.coords.latitude });
     }, () => {
-      if (request === originRequest) $('route-status').textContent = '위치 권한을 허용하거나 아래에서 출발지를 검색해주세요.';
+      if (request === originRequest) {
+        $('origin-options').open = true;
+        $('route-status').textContent = '위치 권한을 허용하거나 출발지를 검색해주세요.';
+      }
     }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 });
   };
   $('route-origin-form').onsubmit = async event => {
@@ -44,6 +47,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     const query = $('route-origin-query').value.trim(); if (!query) return;
     const request = ++originRequest;
     origin = null; reset();
+    onOriginChanged(null);
     $('route-origin-label').textContent = '검색 결과에서 출발지를 선택해주세요';
     $('route-origin-results').replaceChildren();
     $('route-status').textContent = '출발지를 찾고 있습니다…';
@@ -103,7 +107,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
         for (const provider of ['tmap','kakao']) {
           if ($('route-' + provider + '-launch').disabled) $('route-' + provider + '-time').textContent = '조회 불가';
         }
-        $('route-compare').disabled = false; $('route-compare').textContent = '다시 비교하기'; }
+        $('route-compare').disabled = false; $('route-compare').textContent = '새로고침 ↻'; }
     }
   };
   function startAutomatic() {
@@ -112,6 +116,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     else $('route-location').onclick();
   }
   return {
+    locate() { if (!origin && !originRequest) $('route-location').onclick(); },
     configure(url) {
       endpoint = url === 'https://barogil-route-api.hkkim0454.workers.dev' ? url : '';
       $('route-panel').hidden = false; reset();

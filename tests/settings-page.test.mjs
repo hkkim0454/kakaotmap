@@ -6,7 +6,7 @@ test('only settings require a password and closing relocks key editing',async t=
  const config={salt,iterations:210000,hash:pbkdf2Sync(password,salt,210000,32,'sha256').toString('hex')};
  const elements=new Map(); let writes=0,reloads=0;
  const get=id=>{if(!elements.has(id))elements.set(id,{value:'',textContent:'',open:false,focus(){},showModal(){this.open=true;},close(){this.open=false;this.onclose?.();}});return elements.get(id);};
- const globals={document:{getElementById:get},window:{addEventListener(){}},location:{href:'https://example.com/',origin:'https://example.com',reload(){reloads++;}},navigator:{userAgent:'Android',maxTouchPoints:1},localStorage:{getItem(){return '';},setItem(){writes++;}},fetch:async url=>({ok:true,json:async()=>url.includes('settings-lock')?config:{kakaoJavascriptKey:''}})};
+ const globals={document:{querySelectorAll(){return [];},getElementById:get},window:{addEventListener(){}},location:{href:'https://example.com/',origin:'https://example.com',reload(){reloads++;}},navigator:{userAgent:'Android',maxTouchPoints:1},localStorage:{getItem(){return '';},setItem(){writes++;}},fetch:async url=>({ok:true,json:async()=>url.includes('settings-lock')?config:{kakaoJavascriptKey:''}})};
  const previous=new Map();
  for(const [name,value] of Object.entries(globals)){previous.set(name,Object.getOwnPropertyDescriptor(globalThis,name));Object.defineProperty(globalThis,name,{value,writable:true,configurable:true});}
  t.after(()=>{for(const [name,descriptor] of previous){if(descriptor)Object.defineProperty(globalThis,name,descriptor);else delete globalThis[name];}});

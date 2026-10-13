@@ -1,4 +1,4 @@
-export function mountPresets({document,window,store,getSelected,onSelect}) {
+export function mountPresets({document,window,store,getSelected,onSelect,readOnly=false}) {
   const $ = id => document.getElementById(id);
   const slots = Array.from({length:8},(_,i)=>i+1);
   let records = Array(8).fill(null), ready = Array(8).fill(false), busy = false;
@@ -27,6 +27,7 @@ export function mountPresets({document,window,store,getSelected,onSelect}) {
     finally { busy = false; render(); }
   }
   async function change(slot,remove) {
+    if (readOnly) return;
     if (busy || !ready[slot-1]) return;
     const record = records[slot-1], selected = getSelected();
     if (remove && !record || !remove && !selected) return;
@@ -45,9 +46,11 @@ export function mountPresets({document,window,store,getSelected,onSelect}) {
     $(`preset-delete-${slot}`).onclick = () => change(slot,true);
   }
   $('presets-refresh').onclick = refresh;
-  window.addEventListener('focus',refresh);
-  window.setInterval(()=>{if(document.visibilityState === 'visible' && ready.some(Boolean)) refresh();},60000);
+  if (!readOnly) {
+    window.addEventListener('focus',refresh);
+    window.setInterval(()=>{if(document.visibilityState === 'visible' && ready.some(Boolean)) refresh();},60000);
+  }
   render();
   const loaded = refresh();
-  return {selectionChanged:render,loaded};
+  return {selectionChanged:render,loaded,getPlaces:()=>records.filter(Boolean).map(record=>({...record.place}))};
 }
