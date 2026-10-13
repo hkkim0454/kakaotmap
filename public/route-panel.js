@@ -15,7 +15,8 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     $('route-origin-results').replaceChildren();
   }
   $('route-location').onclick = () => {
-    const request = ++originRequest; reset();
+    const request = ++originRequest; origin = null; reset();
+    $('route-origin-label').textContent = '출발지를 선택해주세요';
     $('route-origin-results').replaceChildren();
     if (!navigator.geolocation) { $('route-status').textContent = '현재 위치를 사용할 수 없습니다. 출발지를 검색해주세요.'; return; }
     $('route-status').textContent = '현재 위치를 확인하고 있습니다…';
