@@ -263,7 +263,7 @@ $('group-create').onclick = () => {
   $('group-error').textContent=choices.length ? '' : '먼저 목적지를 검색해 선택하거나 저장된 목적지를 불러와 주세요.';
   $('group-output').hidden=true;$('group-dialog').showModal();
 };
-$('group-close').onclick=()=>$('group-dialog').close();
+$('group-close-bottom').onclick=$('group-close').onclick=()=>$('group-dialog').close();
 $('group-form').oninput=()=>{ $('group-output').hidden=true; };
 $('group-form').onsubmit=event=>{event.preventDefault();try {
   const places=[...$('group-choices').querySelectorAll('input:checked')].map(input=>groupCandidates[Number(input.value)]);
