@@ -177,7 +177,7 @@ function renderResults() {
     const address = document.createElement('small'); address.textContent = `${place.category} · ${place.address}`;
     const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '↗'; arrow.setAttribute('aria-hidden','true');
     body.append(name,address); button.append(pin,body,arrow);
-    button.onclick = () => { selectPlace(place); revealDestination(); };
+    button.onclick = () => { selectPlace(place); revealDestination('route-panel'); };
     $('results').append(button);
   }
   $('more-results').hidden = !state.pagination?.hasNextPage;
