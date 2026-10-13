@@ -9,6 +9,8 @@ const assets = new Map([['/','index.html'],['/index.html','index.html'],['/style
 const types = {html:'text/html; charset=utf-8',css:'text/css; charset=utf-8',js:'text/javascript; charset=utf-8'};
 assets.set('/share.js','share.js');
 assets.set('/route-panel.js','route-panel.js');
+assets.set('/map-view.js','map-view.js');
+assets.set('/group-share.js','group-share.js');
 assets.set('/settings-lock.js','settings-lock.js');
 assets.set('/settings-lock.json','settings-lock.json');
 assets.set('/presets-store.js','presets-store.js');

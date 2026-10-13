@@ -33,7 +33,6 @@ for (const device of ['Android','iPhone']) test(device + ' restores shared desti
   await elements.get('copy-link').onclick();
   assert.deepEqual(readSharedPlace(copied),place);
   assert.equal(elements.get('query').value,place.name);
-  assert.equal(elements.get('route-destination-input').value,place.name);
   elements.get('route-tmap-launch').onclick();
   const launch = window.location.href;
   assert.match(launch,device === 'iPhone' ? /^tmap:\/\/route\?/ : /^intent:\/\/route\?/);

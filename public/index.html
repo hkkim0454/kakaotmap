@@ -8,17 +8,21 @@
   <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
   <title>바로길 · 원하는 내비로 바로 출발</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20261013.10">
-  <script type="module" src="./app.js?v=20261013.10"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261014.1">
+  <script type="module" src="./app.js?v=20261014.1"></script>
 </head>
 <body>
   <div class="bg-orbs" aria-hidden="true"></div>
   <header class="header"><a class="brand" href="./" aria-label="바로길 홈"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m7 25 9-20 9 20-9-5Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg></span><span class="brand-title">바로길<small>SEARCH · SELECT · GO</small></span></a><button class="text-button" id="settings-open"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg>연결 설정</button></header>
-  <main>
-    <section class="intro"><span class="eyebrow intro-badge">↗ 원하는 내비로 한 번에</span><h1>목적지를 찾고,<br><span>가볍게 출발하세요.</span></h1><p>주소 검색부터 TMAP · 카카오내비 연결까지.</p></section>
+  <main class="map-home">
+    <section class="search-panel" aria-label="목적지 검색">
+      <h1 class="sr-only">현재 위치에서 목적지까지, 바로길</h1>
+    <form id="search-form" class="search-form" role="search"><label for="query" class="sr-only">주소 또는 장소명</label><svg class="search-icon icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="query" type="search" placeholder="어디로 갈까요?" maxlength="100" autocomplete="off" enterkeyhint="search" required><button id="search-button" type="submit">검색</button></form>
+      <p id="notice" class="notice" role="status" aria-live="polite"></p>
+      <section id="results-section" hidden aria-label="검색 결과"><div class="section-heading"><h2>검색 결과</h2><span id="result-count"></span></div><div id="results" class="results"></div><button id="more-results" class="secondary" hidden>결과 더 보기</button></section>
+    </section>
     <section class="presets-panel" aria-labelledby="presets-title">
-      <div class="presets-heading"><div><span class="eyebrow">SHARED PRESETS</span><h2 id="presets-title">함께 쓰는 목적지</h2></div><button id="presets-refresh" class="secondary" type="button">새로고침 ↻</button></div>
-      <p class="presets-hint">장소를 검색해 선택한 뒤, 원하는 칸에 저장하세요.</p>
+      <div class="presets-heading"><h2 id="presets-title">저장된 목적지</h2><button id="group-create" class="text-button" type="button">모임 링크 만들기</button><button id="presets-manage" class="text-button" type="button" aria-expanded="false">관리</button></div>
       <div class="presets-grid">
         <article class="preset-card"><button id="preset-open-1" class="preset-open" type="button" disabled><span class="preset-number">목적지 1 <span aria-hidden="true">↗</span></span><strong id="preset-name-1">불러오는 중…</strong><span id="preset-address-1">모바일과 PC에서 함께 사용해요</span></button><div class="preset-actions"><button id="preset-save-1" class="secondary" type="button" disabled>선택한 장소 저장</button><button id="preset-delete-1" class="text-button" type="button" disabled aria-label="목적지 1 삭제">삭제</button></div></article>
         <article class="preset-card"><button id="preset-open-2" class="preset-open" type="button" disabled><span class="preset-number">목적지 2 <span aria-hidden="true">↗</span></span><strong id="preset-name-2">불러오는 중…</strong><span id="preset-address-2">모바일과 PC에서 함께 사용해요</span></button><div class="preset-actions"><button id="preset-save-2" class="secondary" type="button" disabled>선택한 장소 저장</button><button id="preset-delete-2" class="text-button" type="button" disabled aria-label="목적지 2 삭제">삭제</button></div></article>
@@ -29,43 +33,29 @@
         <article class="preset-card"><button id="preset-open-7" class="preset-open" type="button" disabled><span class="preset-number">목적지 7 <span aria-hidden="true">↗</span></span><strong id="preset-name-7">불러오는 중…</strong><span id="preset-address-7">모바일과 PC에서 함께 사용해요</span></button><div class="preset-actions"><button id="preset-save-7" class="secondary" type="button" disabled>선택한 장소 저장</button><button id="preset-delete-7" class="text-button" type="button" disabled aria-label="목적지 7 삭제">삭제</button></div></article>
         <article class="preset-card"><button id="preset-open-8" class="preset-open" type="button" disabled><span class="preset-number">목적지 8 <span aria-hidden="true">↗</span></span><strong id="preset-name-8">불러오는 중…</strong><span id="preset-address-8">모바일과 PC에서 함께 사용해요</span></button><div class="preset-actions"><button id="preset-save-8" class="secondary" type="button" disabled>선택한 장소 저장</button><button id="preset-delete-8" class="text-button" type="button" disabled aria-label="목적지 8 삭제">삭제</button></div></article>
       </div>
-      <p id="presets-status" class="presets-status" role="status" aria-live="polite">공용 저장소에 연결하는 중…</p>
+      <div id="preset-management" hidden><p class="presets-hint">선택한 목적지를 원하는 칸에 저장하세요. 변경은 모두에게 반영됩니다.</p><button id="presets-refresh" class="text-button" type="button">새로고침 ↻</button><p id="presets-status" class="presets-status" role="status" aria-live="polite"></p></div>
     </section>
-    <div class="workspace">
-    <section class="search-panel" aria-label="목적지 검색">
-    <div class="panel-label"><span class="step-number">01</span><span>목적지 찾기</span><span class="panel-hint">주소 또는 장소명</span></div>
-    <form id="search-form" class="search-form" role="search"><label for="query" class="sr-only">주소 또는 장소명</label><svg class="search-icon icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input id="query" type="search" placeholder="어디로 갈까요?" maxlength="100" autocomplete="off" enterkeyhint="search" required><button id="search-button" type="submit">검색</button></form>
-    <div class="search-meta"><span>도로명 · 지번 · 상호명 검색</span><button id="sample-button" class="text-button">예시 장소 보기 ↗</button></div>
-    <p id="notice" class="notice" role="status" aria-live="polite"></p>
-    <section id="results-section" hidden aria-label="검색 결과"><div class="section-heading"><h2>검색 결과</h2><span id="result-count"></span></div><div id="results" class="results"></div><button id="more-results" class="secondary" hidden>결과 더 보기</button></section>
+    <section class="map-stage" aria-label="현재 위치와 목적지 지도">
+      <div class="origin-toolbar"><strong id="route-origin-label">현재 위치를 확인해 주세요</strong><button type="button" id="route-location" class="text-button">⌖ 내 위치</button><details id="origin-options"><summary>출발지 변경</summary><form id="route-origin-form" class="route-origin-form"><label for="route-origin-query" class="sr-only">출발지 주소 또는 장소명</label><input id="route-origin-query" type="search" maxlength="100" placeholder="출발지 검색" required><button type="submit" class="secondary">검색</button></form><div id="route-origin-results" class="route-origin-results" aria-label="출발지 검색 결과"></div></details></div>
+      <div class="map-wrap"><div id="map" aria-label="현재 위치와 목적지"></div><div id="map-placeholder" class="map-placeholder"><span class="pin" aria-hidden="true">⌖</span><strong>지도를 불러오고 있습니다</strong><p>위치 권한을 허용하면 현재 위치가 표시됩니다.</p></div></div>
+      <p id="route-status" class="route-status" role="status" aria-live="polite"></p>
     </section>
-    <div class="preview-panel">
     <section id="destination" class="destination" hidden aria-label="선택한 목적지">
-      <div class="destination-heading"><div class="panel-label"><span class="step-number">02</span><span id="destination-label">선택한 목적지</span></div><button class="text-button" id="copy-address">주소 복사 ↗</button></div>
-      <h2 id="place-name" tabindex="-1"></h2><p id="place-address"></p>
-      <div class="map-wrap"><div id="map" aria-label="목적지 지도"></div><div id="map-placeholder" class="map-placeholder"><span class="pin" aria-hidden="true">⌖</span><strong>목적지를 지도에서 확인하세요</strong><p>연결 설정 후 지도가 표시됩니다.</p></div></div>
+      <div class="selected-place"><div><span id="destination-label" class="eyebrow">도착지</span><h2 id="place-name" tabindex="-1"></h2><p id="place-address"></p></div><button class="text-button" id="copy-address">주소 복사</button></div>
       <section id="route-panel" class="route-panel" aria-labelledby="route-title">
-        <div class="route-heading"><h3 id="route-title">현재 추천 경로 · 예상 소요시간</h3><span>TMAP · 카카오</span></div>
-        <div class="route-destination" aria-live="polite"><span>도착지 · 선택한 목적지 자동 입력</span><label id="route-destination-label" class="sr-only" for="route-destination-input">목적지를 선택해주세요</label><div class="route-destination-field"><input id="route-destination-input" readonly placeholder="목적지를 선택해주세요" aria-label="선택한 도착지"><button id="route-destination-change" class="secondary" type="button">변경</button></div><small id="route-destination-address"></small></div>
-        <div class="route-origin-row"><strong id="route-origin-label">출발지를 선택해주세요</strong><button type="button" id="route-location" class="secondary">⌖ 현재 위치</button></div>
-        <form id="route-origin-form" class="route-origin-form"><label for="route-origin-query" class="sr-only">출발지 주소 또는 장소명</label><input id="route-origin-query" type="search" maxlength="100" placeholder="또는 출발지 검색 (예: 서울역)" required><button type="submit" class="secondary">검색</button></form>
-        <div id="route-origin-results" class="route-origin-results" aria-label="출발지 검색 결과"></div>
-        <p class="route-note">목적지를 선택하면 현재 위치 기준으로 시간을 조회합니다. 표시된 소요시간을 누르면 해당 내비 앱이 실행됩니다.</p>
-        <button id="route-compare" type="button" class="primary route-compare" disabled>경로 비교하기</button>
-        <p id="route-status" class="route-status" role="status" aria-live="polite"></p>
+        <div class="route-heading"><h3 id="route-title">시간을 누르면 내비 실행</h3><button id="route-compare" type="button" class="text-button" disabled>새로고침 ↻</button></div>
         <div id="route-results" class="route-results" hidden>
-          <button type="button" id="route-tmap-launch" class="route-summary" disabled><span class="route-provider">TMAP 추천</span><strong id="route-tmap-time"></strong><span id="route-tmap-detail"></span><span class="route-launch-caption">시간을 눌러 TMAP 실행 ↗</span></button>
-          <button type="button" id="route-kakao-launch" class="route-summary"><span class="route-provider">카카오 추천</span><strong id="route-kakao-time"></strong><span id="route-kakao-detail"></span><span class="route-launch-caption">시간을 눌러 카카오내비 실행 ↗</span></button>
+          <button type="button" id="route-tmap-launch" class="route-summary" disabled><span class="route-provider">TMAP 추천</span><strong id="route-tmap-time"></strong><span id="route-tmap-detail"></span><span class="route-launch-caption">TMAP 실행 ↗</span></button>
+          <button type="button" id="route-kakao-launch" class="route-summary" disabled><span class="route-provider">카카오 추천</span><strong id="route-kakao-time"></strong><span id="route-kakao-detail"></span><span class="route-launch-caption">카카오내비 실행 ↗</span></button>
         </div>
-        <p class="route-note">일반 승용차 기준 예상값입니다. 앱에서는 현재 위치에서 경로를 다시 계산하므로 결과가 달라질 수 있습니다.</p>
+        <p class="route-note">예상 소요시간입니다. 내비 앱에서는 현재 위치에서 다시 계산합니다.</p>
       </section>
       <div class="share-section"><div><strong>함께 갈 사람에게 보내세요</strong><p>같은 목적지, 각자 원하는 내비로.</p></div><div class="share-actions"><button id="share-button" class="primary"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg>목적지 링크 공유</button><button id="copy-link" class="secondary">링크 복사</button></div><div id="share-fallback" hidden><label for="share-url">아래 링크를 길게 눌러 복사하세요.</label><input id="share-url" readonly type="text" aria-label="목적지 공유 링크"></div></div>
     </section>
-    <section id="empty-state" class="empty-state"><div class="empty-illustration" aria-hidden="true"><svg viewBox="0 0 200 130"><path class="route-line" d="M35 99h61c25 0 25-40 49-40h24"/><circle class="route-start" cx="35" cy="99" r="6"/><rect class="map-tile" x="68" y="18" width="70" height="70" rx="22" transform="rotate(-10 103 53)"/><path class="map-pin" d="M103 32c-10 0-18 7-18 17 0 13 18 28 18 28s18-15 18-28c0-10-8-17-18-17Z"/><circle cx="103" cy="49" r="6" fill="white"/><path class="route-arrow" d="m160 51 9 8-9 8"/></svg></div><h2>다음 목적지는 어디인가요?</h2><p>지도에서 확인하고, 원하는 내비로 출발하세요.<br>목적지 링크로 함께 갈 사람에게 공유할 수도 있어요.</p><div class="app-tags" aria-label="지원 내비"><span><i class="tmap-dot"></i>TMAP</span><span><i class="kakao-dot"></i>카카오내비</span></div></section>
-    </div>
-    </div>
-    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.13.10</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
+    <p id="empty-state" class="map-empty-hint">어디로 갈까요? 장소를 검색하거나 저장된 목적지를 선택하세요.</p>
+    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.14.1</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
   </main>
+  <dialog id="group-dialog" aria-labelledby="group-title"><form id="group-form"><div class="dialog-heading"><h2 id="group-title">모임 링크 만들기</h2><button id="group-close" type="button" class="text-button">닫기</button></div><p>이름과 목적지를 골라 보내세요. 보낸 링크의 목적지는 변경되지 않습니다.</p><label for="group-name">모임 이름</label><input id="group-name" maxlength="60" required placeholder="예: 양지CC 토요일 모임"><fieldset id="group-choices"><legend>포함할 목적지 (최대 8개)</legend></fieldset><p id="group-error" role="status"></p><button type="submit" class="primary">링크 만들기</button><div id="group-output" hidden><label for="group-url">모임 전용 링크</label><input id="group-url" readonly><button id="group-copy" type="button" class="secondary">링크 복사</button></div></form></dialog>
   <dialog id="settings-unlock" aria-labelledby="unlock-title"><form id="unlock-form"><div class="dialog-heading"><h2 id="unlock-title">연결 설정 잠금 해제</h2><button type="button" id="unlock-close" class="text-button" aria-label="닫기">✕</button></div><p>JavaScript 키를 변경하려면 설정 비밀번호를 입력해 주세요.</p><label for="settings-password">설정 비밀번호</label><input id="settings-password" type="password" autocomplete="current-password" required><p id="unlock-status" role="status" aria-live="polite"></p><button id="unlock-submit" class="primary" type="submit">설정 열기</button></form></dialog>
   <dialog id="settings"><form id="settings-form"><div class="dialog-heading"><h2>카카오 연결 설정</h2><button type="button" id="settings-close" class="text-button" aria-label="설정 닫기">✕</button></div><p>검색, 지도와 카카오내비를 사용하려면 카카오 개발자 앱의 <strong>JavaScript 키</strong>를 입력해 주세요.</p><label for="api-key">JavaScript 키</label><input id="api-key" required autocomplete="off" spellcheck="false" placeholder="JavaScript 키 입력" pattern="[a-fA-F0-9]{32}" title="32자리 JavaScript 키를 입력해 주세요."><p class="field-help">이 브라우저에 저장됩니다. REST API 키나 Admin 키는 입력하지 마세요.</p><div class="setup-instructions"><strong>처음 연결할 때</strong><ol><li><a href="https://developers.kakao.com/" target="_blank" rel="noopener noreferrer">카카오디벨로퍼스</a>에서 앱을 만들고 JavaScript 키를 확인합니다.</li><li>JavaScript SDK 도메인과 지도 서비스의 웹 도메인 설정에 아래 접속 주소를 등록합니다.<code id="current-origin"></code></li><li>카카오맵 사용 설정·권한도 확인합니다. 휴대폰 접속 주소가 다르면 그 주소도 등록합니다.</li></ol></div><p id="settings-status" role="status"></p><button class="primary" type="submit">저장하고 연결하기</button></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>

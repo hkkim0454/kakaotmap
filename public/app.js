@@ -1,19 +1,25 @@
 import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigation.js';
+import { createGroupUrl, readGroupUrl } from './group-share.js?v=20261014.1';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { createPresetStore } from './presets-store.js';
-import { mountPresets } from './presets-ui.js';
-import { mountRoutePanel } from './route-panel.js?v=20261013.8';
+import { mountPresets } from './presets-ui.js?v=20261014.1';
+import { mountRoutePanel } from './route-panel.js?v=20261014.1';
+import { createMapView } from './map-view.js?v=20261014.1';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
 const sample = { name: '현대백화점 판교점', address: '경기도 성남시 분당구 판교역로146번길 20', x: 127.11205203011632, y: 37.39279717586919 };
-const state = { selected: null, map: null, marker: null, mapsReady: false, naviReady: false, searchId: 0, pagination: null, rows: [] };
+const state = { origin:null, mapView:null, selected: null, map: null, marker: null, mapsReady: false, naviReady: false, searchId: 0, pagination: null, rows: [] };
 const storage = { get() { try { return localStorage.getItem('barogil-kakao-key') || ''; } catch { return ''; } }, set(key) { localStorage.setItem('barogil-kakao-key', key); } };
 let toastTimer;
 let sharedLinkError = '';
 let presets;
+let groupSnapshot = null, groupLinkInvalid = false, groupCandidates = [];
+try { groupSnapshot = readGroupUrl(location.href); } catch (error) { sharedLinkError = error.message; groupLinkInvalid = true; }
+
 const routePanel = mountRoutePanel({ document, navigator, getDestination: () => state.selected,
+  onOriginChanged: place => { state.origin = place; drawMap(); },
   searchPlaces: async query => {
     if (!state.mapsReady) throw new Error('Maps not ready');
     const places = new kakao.maps.services.Places();
@@ -83,20 +89,16 @@ $('settings-form').onsubmit = event => {
 };
 
 function drawMap() {
-  if (!state.mapsReady || !state.selected) return;
+  if (!state.mapsReady) return;
   try {
-    const position = new kakao.maps.LatLng(state.selected.y, state.selected.x);
-    if (!state.map) {
-      state.map = new kakao.maps.Map($('map'), { center: position, level: 3 });
-      state.marker = new kakao.maps.Marker({ map: state.map, position });
-      state.map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
-    }
-    state.map.relayout(); state.map.setCenter(position); state.marker.setPosition(position);
+    state.mapView ||= createMapView(kakao.maps,$('map'));
+    state.mapView.render(state.origin,state.selected);
     $('map-placeholder').hidden = true;
-  } catch { $('map-placeholder').hidden = false; $('map-placeholder').querySelector('p').textContent = '지도를 불러오지 못했습니다. 목적지는 아래 내비 버튼으로 전달할 수 있습니다.'; }
+  } catch { $('map-placeholder').hidden = false; $('map-placeholder').querySelector('p').textContent = '지도를 불러오지 못했습니다. 검색과 소요시간 비교는 계속 이용할 수 있습니다.'; }
 }
 window.addEventListener('resize', () => drawMap());
 function selectPlace(place, example = false, currentLocation = false) {
+  notice('');
   state.selected = place;
   state.searchId++;
   state.pagination = null;
@@ -109,10 +111,18 @@ function selectPlace(place, example = false, currentLocation = false) {
   $('place-name').textContent = place.name;
   $('query').value = place.name;
   $('place-address').textContent = place.address;
-  $('destination-label').textContent = example ? '예시 목적지 · 실제 검색 결과가 아닙니다' : '선택한 목적지';
+  $('destination-label').textContent = '도착지';
   document.querySelectorAll('.result').forEach(button => button.classList.toggle('selected', button.dataset.place === `${place.name}|${place.x}|${place.y}`));
   drawMap();
 }
+$('presets-manage').onclick = () => {
+  const expanded = $('presets-manage').getAttribute('aria-expanded') !== 'true';
+  $('presets-manage').setAttribute('aria-expanded',String(expanded));
+  $('presets-manage').textContent = expanded ? '완료' : '관리';
+  $('preset-management').hidden = !expanded;
+  document.querySelectorAll('.preset-actions').forEach(el=>{el.hidden=!expanded;});
+};
+document.querySelectorAll('.preset-actions').forEach(el=>{el.hidden=true;});
 function shareLink() { return createShareUrl(location.href,state.selected); }
 async function copyText(text) {
   if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
@@ -142,15 +152,13 @@ $('copy-link').onclick = async () => {
 function revealDestination(targetId = 'destination') {
   if ($(targetId).hidden) targetId = 'destination';
   $('query').blur?.();
-  $(targetId === 'route-panel' ? 'route-destination-input' : 'place-name').focus?.({preventScroll:true});
+  $('place-name').focus?.({preventScroll:true});
   if (targetId === 'route-panel' || !window.matchMedia?.('(min-width: 900px)').matches) {
     // Let the keyboard/focus change settle before positioning the selected place.
     const reveal = () => $(targetId).scrollIntoView({ behavior: 'auto', block: 'start' });
     if (window.requestAnimationFrame) window.requestAnimationFrame(reveal); else reveal();
   }
 }
-$('route-destination-change').onclick = () => { $('query').focus(); $('query').select(); $('query').scrollIntoView({behavior:'auto',block:'center'}); };
-$('sample-button').onclick = () => { selectPlace(sample, true); revealDestination(); };
 $('copy-address').onclick = async () => {
   if (!state.selected) return;
   try {
@@ -198,6 +206,7 @@ async function search(query, page = 1) {
   if (page === 1) {
     state.selected = null; state.rows = []; state.pagination = null;
     routePanel.destinationChanged();
+    drawMap();
     presets?.selectionChanged();
     $('destination').hidden = true; $('results-section').hidden = true; $('empty-state').hidden = false;
   }
@@ -245,6 +254,32 @@ $('route-kakao-launch').onclick = () => {
   catch { toast('카카오내비를 열지 못했습니다. 잠시 후 다시 눌러 주세요.'); }
 };
 
+$('group-create').onclick = () => {
+  const choices = [state.selected,...(presets?.getPlaces() || [])].filter(Boolean);
+  groupCandidates = [...new Map(choices.map(p=>[p.name+'|'+p.x+'|'+p.y,p])).values()];
+  $('group-choices').replaceChildren();
+  const legend=document.createElement('legend');legend.textContent='포함할 목적지 (최대 8개)';$('group-choices').append(legend);
+  groupCandidates.forEach((p,i)=>{const label=document.createElement('label'),input=document.createElement('input'),span=document.createElement('span');input.type='checkbox';input.value=String(i);input.checked=i<8;span.textContent=p.name+(p.address ? " · "+p.address : "");label.append(input,span);$('group-choices').append(label);});
+  $('group-error').textContent=choices.length ? '' : '먼저 목적지를 검색해 선택하거나 저장된 목적지를 불러와 주세요.';
+  $('group-output').hidden=true;$('group-dialog').showModal();
+};
+$('group-close').onclick=()=>$('group-dialog').close();
+$('group-form').oninput=()=>{ $('group-output').hidden=true; };
+$('group-form').onsubmit=event=>{event.preventDefault();try {
+  const places=[...$('group-choices').querySelectorAll('input:checked')].map(input=>groupCandidates[Number(input.value)]);
+  $('group-url').value=createGroupUrl(location.href,$('group-name').value,places);
+  $('group-output').hidden=false;$('group-error').textContent='';
+} catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
+$('group-copy').onclick=async()=>{try{await copyText($('group-url').value);toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
+if (groupSnapshot) {
+  $('presets-title').textContent=groupSnapshot.name;
+  document.title=groupSnapshot.name+' · 바로길';
+  $('presets-manage').hidden=true;
+  document.querySelectorAll('.preset-card').forEach((el,i)=>{el.hidden=i>=groupSnapshot.places.length;});
+  presets=mountPresets({document,window,getSelected:()=>state.selected,readOnly:true,
+    store:{read:async slot=>groupSnapshot.places[slot-1] ? {place:groupSnapshot.places[slot-1],version:'snapshot'} : null},
+    onSelect:place=>{selectPlace(place,false,true);revealDestination('route-panel');}});
+}
 async function initialize() {
   try {
     const response = await fetch('./config.json', {cache:'no-store'});
@@ -252,7 +287,7 @@ async function initialize() {
       const config = await response.json();
       state.configKey = config.kakaoJavascriptKey;
       routePanel.configure(config.routeApiUrl);
-      if (config.firebase) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
+      if (config.firebase && !groupSnapshot && !groupLinkInvalid) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
         getSelected:()=>state.selected,onSelect:place=>{selectPlace(place,false,true);revealDestination('route-panel');}});
     }
   } catch { /* Browser setting is also supported. */ }
@@ -264,7 +299,7 @@ async function initialize() {
     (async () => {
       await loadScript(`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`);
       await new Promise((resolve,reject) => { const timer = setTimeout(() => reject(new Error('지도 로딩 시간 초과')),10000); kakao.maps.load(() => {clearTimeout(timer); resolve();}); });
-      state.mapsReady = true; drawMap();
+      state.mapsReady = true; drawMap(); routePanel.locate();
     })(),
     (async () => {
       await loadScript('https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js');
