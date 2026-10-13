@@ -2,7 +2,7 @@
 // Secrets: TMAP_APP_KEY, KAKAO_REST_API_KEY. D1 binding: ROUTE_DB.
 // No API keys or location history are stored in this file/database.
 const SITE = 'https://hkkim0454.github.io';
-const VERSION = '2026-10-13.2';
+const VERSION = '2026-10-13.3';
 const DAILY_LIMIT = 400;
 const SCHEMA = 'CREATE TABLE IF NOT EXISTS route_usage (day TEXT PRIMARY KEY, used INTEGER NOT NULL)';
 const RESERVE = `INSERT INTO route_usage(day, used) VALUES (?1, 1)
@@ -57,7 +57,9 @@ async function queryProvider(provider, origin, destination, env, fetcher) {
   const timer = setTimeout(() => controller.abort(), 10000);
   let httpStatus;
   try {
-    const common = { signal: controller.signal, redirect: 'error' };
+    // workerd does not implement redirect:error. Manual keeps API keys from
+    // following redirects; the response.ok check below rejects every 3xx.
+    const common = { signal: controller.signal, redirect: 'manual' };
     if (provider === 'tmap') {
       const response = await fetcher('https://apis.openapi.sk.com/tmap/routes?version=1', {
         ...common, method: 'POST', headers: { 'Content-Type': 'application/json', appKey: env.TMAP_APP_KEY },

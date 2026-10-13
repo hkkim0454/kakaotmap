@@ -16,6 +16,8 @@ function request(body = { origin: { x: 126.97, y: 37.55 }, destination: { x: 127
 }
 const now = () => new Date('2026-10-13T12:00:00Z');
 async function upstream(url, options) {
+  // workerd supports follow/manual only. Rejecting redirects must use manual.
+  assert.equal(options.redirect, 'manual');
   if (String(url).includes('sk.com')) {
     assert.equal(options.headers.appKey, 'test-tmap');
     assert.equal(JSON.parse(options.body).carType, 1);
