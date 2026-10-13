@@ -3,7 +3,7 @@ import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { createPresetStore } from './presets-store.js';
 import { mountPresets } from './presets-ui.js';
-import { mountRoutePanel } from './route-panel.js';
+import { mountRoutePanel } from './route-panel.js?v=20261013.6';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -135,12 +135,13 @@ $('copy-link').onclick = async () => {
   try { await copyText(url); toast('목적지 링크를 복사했습니다.'); }
   catch { showShareFallback(url); }
 };
-function revealDestination() {
+function revealDestination(targetId = 'destination') {
+  if ($(targetId).hidden) targetId = 'destination';
   $('query').blur?.();
-  $('place-name').focus?.({preventScroll:true});
-  if (!window.matchMedia?.('(min-width: 900px)').matches) {
+  $(targetId === 'route-panel' ? 'route-destination-label' : 'place-name').focus?.({preventScroll:true});
+  if (targetId === 'route-panel' || !window.matchMedia?.('(min-width: 900px)').matches) {
     // Let the keyboard/focus change settle before positioning the selected place.
-    const reveal = () => $('destination').scrollIntoView({ behavior: 'auto', block: 'start' });
+    const reveal = () => $(targetId).scrollIntoView({ behavior: 'auto', block: 'start' });
     if (window.requestAnimationFrame) window.requestAnimationFrame(reveal); else reveal();
   }
 }
@@ -254,7 +255,7 @@ async function initialize() {
       state.configKey = config.kakaoJavascriptKey;
       routePanel.configure(config.routeApiUrl);
       if (config.firebase) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
-        getSelected:()=>state.selected,onSelect:place=>{selectPlace(place);revealDestination();}});
+        getSelected:()=>state.selected,onSelect:place=>{selectPlace(place);revealDestination('route-panel');}});
     }
   } catch { /* Browser setting is also supported. */ }
   if (!presets) $('presets-status').textContent = '공용 목적지 설정을 불러오지 못했습니다. 페이지를 새로고침해 주세요.';

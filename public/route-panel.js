@@ -4,6 +4,9 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
   let endpoint = '', origin = null, generation = 0, originRequest = 0, controller;
   function reset() {
     generation++; controller?.abort();
+    const destination = getDestination();
+    $('route-destination-label').textContent = destination?.name || '목적지를 선택해주세요';
+    $('route-destination-address').textContent = destination?.address || '';
     $('route-results').hidden = true;
     $('route-status').textContent = '';
     $('route-compare').textContent = '경로 비교하기';

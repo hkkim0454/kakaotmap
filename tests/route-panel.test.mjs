@@ -13,6 +13,19 @@ function fixture(fetcher, geolocation = { getCurrentPosition(ok) {ok({coords:{lo
   return {get,panel, change(){ destination={name:'다른 곳',x:127,y:37}; panel.destinationChanged(); }};
 }
 const good = () => Response.json({routes:[{provider:'tmap',status:'ok',durationSeconds:1563,distanceMeters:12028,tollWon:0},{provider:'kakao',status:'error'}],queriedAt:'2026-10-13T11:21:53Z'});
+test('selected destination is displayed automatically while preserving origin without automatic requests',async()=>{
+ let body, calls=0;
+ const f=fixture(async(url,options)=>{calls++;body=JSON.parse(options.body);return good();});
+ assert.equal(f.get('route-destination-label').textContent,'강남역');
+ await f.get('route-location').onclick();
+ const originLabel=f.get('route-origin-label').textContent;
+ f.change();
+ assert.equal(f.get('route-destination-label').textContent,'다른 곳');
+ assert.equal(f.get('route-origin-label').textContent,originLabel);
+ assert.equal(calls,0);
+ await f.get('route-compare').onclick();
+ assert.deepEqual(body,{origin:{x:126.97,y:37.55},destination:{x:127,y:37}});
+});
 test('comparison requires explicit click and preserves successful result with partial failure',async()=>{
  let calls=0;
  const f=fixture(async(url,options)=>{calls++;assert.equal(JSON.parse(options.body).origin.x,126.97); return good();});
