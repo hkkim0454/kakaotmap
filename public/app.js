@@ -1,6 +1,8 @@
 import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigation.js';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
+import { createPresetStore } from './presets-store.js';
+import { mountPresets } from './presets-ui.js';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -9,6 +11,7 @@ const state = { selected: null, map: null, marker: null, mapsReady: false, naviR
 const storage = { get() { try { return localStorage.getItem('barogil-kakao-key') || ''; } catch { return ''; } }, set(key) { localStorage.setItem('barogil-kakao-key', key); } };
 let toastTimer;
 let sharedLinkError = '';
+let presets;
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 4000); }
 function notice(message) { $('notice').textContent = message; }
 function loadScript(src) {
@@ -81,6 +84,7 @@ function drawMap() {
 window.addEventListener('resize', () => drawMap());
 function selectPlace(place, example = false) {
   state.selected = place;
+  presets?.selectionChanged();
   document.title = `${place.name} · 바로길`;
   $('share-fallback').hidden = true;
   $('destination').hidden = false; $('empty-state').hidden = true; $('launch-help').hidden = true;
@@ -166,6 +170,7 @@ async function search(query, page = 1) {
   notice('장소를 찾고 있습니다…');
   if (page === 1) {
     state.selected = null; state.rows = []; state.pagination = null;
+    presets?.selectionChanged();
     $('destination').hidden = true; $('results-section').hidden = true; $('empty-state').hidden = false;
   }
   try {
@@ -219,7 +224,16 @@ $('kakao-button').onclick = () => {
 };
 
 async function initialize() {
-  try { const response = await fetch('./config.json'); if (response.ok) state.configKey = (await response.json()).kakaoJavascriptKey; } catch { /* Browser setting is also supported. */ }
+  try {
+    const response = await fetch('./config.json');
+    if (response.ok) {
+      const config = await response.json();
+      state.configKey = config.kakaoJavascriptKey;
+      if (config.firebase) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
+        getSelected:()=>state.selected,onSelect:place=>{selectPlace(place);revealDestination();}});
+    }
+  } catch { /* Browser setting is also supported. */ }
+  if (!presets) $('presets-status').textContent = '공용 목적지 설정을 불러오지 못했습니다. 페이지를 새로고침해 주세요.';
   const key = storage.get() || state.configKey;
   if (!key) { notice(sharedLinkError || '처음 사용하시나요? 연결 설정을 완료하면 장소 검색과 카카오내비를 사용할 수 있습니다.'); return; }
   notice('검색과 내비 서비스를 연결하고 있습니다…');

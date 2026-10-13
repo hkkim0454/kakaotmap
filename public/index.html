@@ -8,14 +8,23 @@
   <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
   <title>바로길 · 원하는 내비로 바로 출발</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=4">
-  <script type="module" src="./app.js?v=4"></script>
+  <link rel="stylesheet" href="./styles.css?v=5">
+  <script type="module" src="./app.js?v=5"></script>
 </head>
 <body>
   <div class="bg-orbs" aria-hidden="true"></div>
   <header class="header"><a class="brand" href="./" aria-label="바로길 홈"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="m7 25 9-20 9 20-9-5Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/></svg></span><span class="brand-title">바로길<small>SEARCH · SELECT · GO</small></span></a><button class="text-button" id="settings-open"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16M8 4v6M16 14v6"/></svg>연결 설정</button></header>
   <main>
     <section class="intro"><span class="eyebrow intro-badge">↗ 원하는 내비로 한 번에</span><h1>목적지를 찾고,<br><span>가볍게 출발하세요.</span></h1><p>주소 검색부터 TMAP · 카카오내비 연결까지.</p></section>
+    <section class="presets-panel" aria-labelledby="presets-title">
+      <div class="presets-heading"><div><span class="eyebrow">SHARED PRESETS</span><h2 id="presets-title">함께 쓰는 목적지</h2></div><button id="presets-refresh" class="secondary" type="button">새로고침 ↻</button></div>
+      <p class="presets-hint">장소를 검색해 선택한 뒤, 원하는 칸에 저장하세요.</p>
+      <div class="presets-grid">
+        <article class="preset-card"><button id="preset-open-1" class="preset-open" type="button" disabled><span class="preset-number">목적지 1 <span aria-hidden="true">↗</span></span><strong id="preset-name-1">불러오는 중…</strong><span id="preset-address-1">모바일과 PC에서 함께 사용해요</span></button><div class="preset-actions"><button id="preset-save-1" class="secondary" type="button" disabled>선택한 장소 저장</button><button id="preset-delete-1" class="text-button" type="button" disabled aria-label="목적지 1 삭제">삭제</button></div></article>
+        <article class="preset-card"><button id="preset-open-2" class="preset-open" type="button" disabled><span class="preset-number">목적지 2 <span aria-hidden="true">↗</span></span><strong id="preset-name-2">불러오는 중…</strong><span id="preset-address-2">모바일과 PC에서 함께 사용해요</span></button><div class="preset-actions"><button id="preset-save-2" class="secondary" type="button" disabled>선택한 장소 저장</button><button id="preset-delete-2" class="text-button" type="button" disabled aria-label="목적지 2 삭제">삭제</button></div></article>
+      </div>
+      <p id="presets-status" class="presets-status" role="status" aria-live="polite">공용 저장소에 연결하는 중…</p>
+    </section>
     <div class="workspace">
     <section class="search-panel" aria-label="목적지 검색">
     <div class="panel-label"><span class="step-number">01</span><span>목적지 찾기</span><span class="panel-hint">주소 또는 장소명</span></div>
