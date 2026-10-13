@@ -31,3 +31,17 @@ test('permission or save failures do not display success and require refresh bef
   denied=false;await f.$('presets-refresh').onclick();assert.equal(f.$('preset-save-1').disabled,false);
   await f.$('preset-save-1').onclick();assert.equal(f.$('presets-status').textContent,'저장 실패');assert.equal(f.$('preset-save-1').disabled,true);
 });
+test('existing slots remain usable while rules for the six new slots await publication',async()=>{
+  const f=fixture({read:async slot=>{if(slot>2)throw new Error('규칙 게시 필요');return {place,version:'v1'};}});
+  await f.ui.loaded;f.select(place);
+  assert.equal(f.$('preset-save-1').disabled,false);
+  assert.equal(f.$('preset-open-2').disabled,false);
+  assert.equal(f.$('preset-save-8').disabled,true);
+  assert.equal(f.$('presets-status').textContent,'규칙 게시 필요');
+});
+test('the eighth card can save and reopen a selected destination',async()=>{
+  let savedSlot;
+  const f=fixture({read:async()=>null,save:async(slot,value)=>{savedSlot=slot;return {place:value,version:'v1'};}});
+  await f.ui.loaded;f.select(place);await f.$('preset-save-8').onclick();
+  assert.equal(savedSlot,8);f.$('preset-open-8').onclick();assert.deepEqual(f.opened(),place);
+});

@@ -34,8 +34,15 @@ test('permissions and conflicts are errors, never empty slots or false success',
 });
 test('invalid slots or destinations never reach Firestore',async()=>{
   const store=createPresetStore(config,async()=>{throw new Error('unexpected request');});
-  await assert.rejects(store.read(3),/목적지/);
+  await assert.rejects(store.read(9),/목적지/);
   for(const bad of [{...place,name:''},{...place,x:NaN},{...place,y:100},{...place,address:'x'.repeat(241)}])
     await assert.rejects(store.save(1,bad,null),/목적지/);
   await assert.rejects(store.remove(1,null),/목적지/);
+});
+
+test('slot 8 supports reading, saving and deleting; invalid indices fail',async()=>{
+ const urls=[];const store=createPresetStore(config,async(url,options)=>{urls.push(url);return {ok:true,status:200,json:async()=>document};});
+ assert.deepEqual((await store.read(8)).place,place);await store.save(8,place,document.updateTime);await store.remove(8,document.updateTime);
+ assert.ok(urls.every(url=>url.includes('/barogil_presets/8?')));
+ for(const slot of [0,9,1.5,'1']) await assert.rejects(store.read(slot),/목적지/);
 });
