@@ -34,8 +34,6 @@ test('recipient restores shared destination and copies the same link without sea
   assert.deepEqual(readSharedPlace(copied),place);
   assert.equal(elements.get('query').value,place.name);
   assert.equal(elements.get('route-destination-input').value,place.name);
-  assert.equal(elements.get('route-tmap-launch').onclick,elements.get('tmap-button').onclick);
-  assert.equal(elements.get('route-kakao-launch').onclick,elements.get('kakao-button').onclick);
   elements.get('route-tmap-launch').onclick();
   assert.match(window.location.href,/^intent:\/\/route\?/);
   // Toast timers run after teardown; let them finish while the DOM fixture is present.

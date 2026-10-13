@@ -3,7 +3,7 @@ import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { createPresetStore } from './presets-store.js';
 import { mountPresets } from './presets-ui.js';
-import { mountRoutePanel } from './route-panel.js?v=20261013.7';
+import { mountRoutePanel } from './route-panel.js?v=20261013.8';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -96,12 +96,12 @@ function drawMap() {
   } catch { $('map-placeholder').hidden = false; $('map-placeholder').querySelector('p').textContent = '지도를 불러오지 못했습니다. 목적지는 아래 내비 버튼으로 전달할 수 있습니다.'; }
 }
 window.addEventListener('resize', () => drawMap());
-function selectPlace(place, example = false) {
+function selectPlace(place, example = false, currentLocation = false) {
   state.selected = place;
   state.searchId++;
   state.pagination = null;
   $('results-section').hidden = true;
-  routePanel.destinationChanged();
+  routePanel.destinationChanged({autoCompare:true,currentLocation});
   presets?.selectionChanged();
   document.title = `${place.name} · 바로길`;
   $('share-fallback').hidden = true;
@@ -242,11 +242,11 @@ function prepareLaunch(app) {
   return true;
 }
 // Keep app launches synchronous inside the user gesture; do not await network work here.
-$('route-tmap-launch').onclick = $('tmap-button').onclick = () => {
+$('route-tmap-launch').onclick = () => {
   try { if (prepareLaunch('tmap')) window.location.href = tmapUrl(state.selected,os); }
   catch { toast('앱을 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
 };
-$('route-kakao-launch').onclick = $('kakao-button').onclick = () => {
+$('route-kakao-launch').onclick = () => {
   if (!state.naviReady) { toast('카카오내비 연결을 준비 중입니다. 잠시 후 다시 눌러 주세요.'); return; }
   try { if (prepareLaunch('kakao')) Kakao.Navi.start(kakaoDestination(state.selected)); }
   catch { $('launch-message').textContent = '카카오내비를 열지 못했습니다. 연결 설정을 확인해 주세요.'; }
@@ -260,7 +260,7 @@ async function initialize() {
       state.configKey = config.kakaoJavascriptKey;
       routePanel.configure(config.routeApiUrl);
       if (config.firebase) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
-        getSelected:()=>state.selected,onSelect:place=>{selectPlace(place);revealDestination('route-panel');}});
+        getSelected:()=>state.selected,onSelect:place=>{selectPlace(place,false,true);revealDestination('route-panel');}});
     }
   } catch { /* Browser setting is also supported. */ }
   if (!presets) $('presets-status').textContent = '공용 목적지 설정을 불러오지 못했습니다. 페이지를 새로고침해 주세요.';
