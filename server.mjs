@@ -8,6 +8,7 @@ const publicDirectory = new URL('./public/', import.meta.url);
 const assets = new Map([['/','index.html'],['/index.html','index.html'],['/styles.css','styles.css'],['/app.js','app.js'],['/navigation.js','navigation.js']]);
 const types = {html:'text/html; charset=utf-8',css:'text/css; charset=utf-8',js:'text/javascript; charset=utf-8'};
 assets.set('/share.js','share.js');
+assets.set('/route-panel.js','route-panel.js');
 assets.set('/settings-lock.js','settings-lock.js');
 assets.set('/settings-lock.json','settings-lock.json');
 assets.set('/presets-store.js','presets-store.js');
@@ -30,7 +31,7 @@ export function createAppServer({kakaoJavascriptKey = process.env.KAKAO_JAVASCRI
       try { config = JSON.parse(await readFile(new URL('config.json',publicDirectory),'utf8')); } catch { /* Optional public configuration. */ }
       const publicKey = kakaoJavascriptKey || config.kakaoJavascriptKey || '';
       res.writeHead(200,{'Content-Type':'application/json; charset=utf-8'});
-      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({kakaoJavascriptKey:publicKey,...(config.firebase ? {firebase:config.firebase} : {})})); return;
+      res.end(req.method === 'HEAD' ? undefined : JSON.stringify({kakaoJavascriptKey:publicKey,routeApiUrl:config.routeApiUrl || '',...(config.firebase ? {firebase:config.firebase} : {})})); return;
     }
     const asset = assets.get(path);
     if (!asset) { res.writeHead(404); res.end('Not found'); return; }

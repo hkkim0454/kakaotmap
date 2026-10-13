@@ -1,4 +1,5 @@
 {
+  "routeApiUrl": "https://barogil-route-api.hkkim0454.workers.dev",
   "kakaoJavascriptKey": "ac5ac13631ac7d2bd4b3ea42e861846f",
   "firebase": {
     "projectId": "svt-led-calculator",

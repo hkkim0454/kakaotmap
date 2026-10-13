@@ -3,6 +3,7 @@ import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { createPresetStore } from './presets-store.js';
 import { mountPresets } from './presets-ui.js';
+import { mountRoutePanel } from './route-panel.js';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -12,6 +13,19 @@ const storage = { get() { try { return localStorage.getItem('barogil-kakao-key')
 let toastTimer;
 let sharedLinkError = '';
 let presets;
+const routePanel = mountRoutePanel({ document, navigator, getDestination: () => state.selected,
+  searchPlaces: async query => {
+    if (!state.mapsReady) throw new Error('Maps not ready');
+    const places = new kakao.maps.services.Places();
+    const geocoder = new kakao.maps.services.Geocoder();
+    const results = await Promise.all([
+      sdkSearch(callback => places.keywordSearch(query, callback, {size:5})),
+      sdkSearch(callback => geocoder.addressSearch(query, callback, {size:5}))
+    ]);
+    if (results.every(result => result.failed)) throw new Error('Search failed');
+    return normalizeResults(results.flatMap(result => result.rows));
+  }
+});
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 4000); }
 function notice(message) { $('notice').textContent = message; }
 function loadScript(src) {
@@ -84,6 +98,7 @@ function drawMap() {
 window.addEventListener('resize', () => drawMap());
 function selectPlace(place, example = false) {
   state.selected = place;
+  routePanel.destinationChanged();
   presets?.selectionChanged();
   document.title = `${place.name} · 바로길`;
   $('share-fallback').hidden = true;
@@ -170,6 +185,7 @@ async function search(query, page = 1) {
   notice('장소를 찾고 있습니다…');
   if (page === 1) {
     state.selected = null; state.rows = []; state.pagination = null;
+    routePanel.destinationChanged();
     presets?.selectionChanged();
     $('destination').hidden = true; $('results-section').hidden = true; $('empty-state').hidden = false;
   }
@@ -229,6 +245,7 @@ async function initialize() {
     if (response.ok) {
       const config = await response.json();
       state.configKey = config.kakaoJavascriptKey;
+      routePanel.configure(config.routeApiUrl);
       if (config.firebase) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
         getSelected:()=>state.selected,onSelect:place=>{selectPlace(place);revealDestination();}});
     }
