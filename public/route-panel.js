@@ -6,6 +6,8 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     generation++; controller?.abort();
     const destination = getDestination();
     $('route-destination-label').textContent = destination?.name || '목적지를 선택해주세요';
+    $('route-destination-input').value = destination?.name || '';
+    $('route-direct').hidden = false;
     $('route-destination-address').textContent = destination?.address || '';
     $('route-results').hidden = true;
     $('route-status').textContent = '';
@@ -15,6 +17,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
   function selectOrigin(place) {
     origin = place; reset();
     $('route-origin-label').textContent = `출발: ${place.name}`;
+    $('route-origin-query').value = place.name;
     $('route-origin-results').replaceChildren();
   }
   $('route-location').onclick = () => {
@@ -82,6 +85,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
       const queried = new Date(data.queriedAt);
       $('route-status').textContent = successes ? `${Number.isNaN(queried.getTime()) ? '' : queried.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'}) + ' 기준 · '}추천 경로 비교 결과입니다.` : '두 서비스에서 경로를 조회하지 못했습니다. 아래 내비 앱에서 확인해주세요.';
       $('route-results').hidden = false;
+      $('route-direct').hidden = true;
     } catch {
       if (request === generation) $('route-status').textContent = '경로 비교가 지연되거나 연결이 끊겼습니다. 다시 눌러주세요.';
     } finally {
@@ -92,7 +96,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
   return {
     configure(url) {
       endpoint = url === 'https://barogil-route-api.hkkim0454.workers.dev' ? url : '';
-      $('route-panel').hidden = !endpoint; reset();
+      $('route-panel').hidden = false; reset();
     },
     destinationChanged() { reset(); }
   };

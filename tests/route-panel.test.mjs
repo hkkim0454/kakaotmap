@@ -17,10 +17,12 @@ test('selected destination is displayed automatically while preserving origin wi
  let body, calls=0;
  const f=fixture(async(url,options)=>{calls++;body=JSON.parse(options.body);return good();});
  assert.equal(f.get('route-destination-label').textContent,'강남역');
+ assert.equal(f.get('route-destination-input').value,'강남역');
  await f.get('route-location').onclick();
  const originLabel=f.get('route-origin-label').textContent;
  f.change();
  assert.equal(f.get('route-destination-label').textContent,'다른 곳');
+ assert.equal(f.get('route-destination-input').value,'다른 곳');
  assert.equal(f.get('route-origin-label').textContent,originLabel);
  assert.equal(calls,0);
  await f.get('route-compare').onclick();
@@ -35,6 +37,13 @@ test('comparison requires explicit click and preserves successful result with pa
  assert.match(f.get('route-tmap-detail').textContent,/0원/);
  assert.match(f.get('route-kakao-time').textContent,/조회 불가/);
  assert.equal(f.get('route-results').hidden,false);
+ assert.equal(f.get('route-direct').hidden,true);
+});
+test('direct navigation remains available when comparison is unconfigured',()=>{
+ const f=fixture(good);f.panel.configure('');
+ assert.equal(f.get('route-panel').hidden,false);
+ assert.equal(f.get('route-direct').hidden,false);
+ assert.equal(f.get('route-compare').disabled,true);
 });
 test('destination changes discard a late response and re-enable comparison',async()=>{
  let release;

@@ -3,7 +3,7 @@ import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { createPresetStore } from './presets-store.js';
 import { mountPresets } from './presets-ui.js';
-import { mountRoutePanel } from './route-panel.js?v=20261013.6';
+import { mountRoutePanel } from './route-panel.js?v=20261013.7';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -98,12 +98,16 @@ function drawMap() {
 window.addEventListener('resize', () => drawMap());
 function selectPlace(place, example = false) {
   state.selected = place;
+  state.searchId++;
+  state.pagination = null;
+  $('results-section').hidden = true;
   routePanel.destinationChanged();
   presets?.selectionChanged();
   document.title = `${place.name} · 바로길`;
   $('share-fallback').hidden = true;
   $('destination').hidden = false; $('empty-state').hidden = true; $('launch-help').hidden = true;
   $('place-name').textContent = place.name;
+  $('query').value = place.name;
   $('place-address').textContent = place.address;
   $('destination-label').textContent = example ? '예시 목적지 · 실제 검색 결과가 아닙니다' : '선택한 목적지';
   document.querySelectorAll('.result').forEach(button => button.classList.toggle('selected', button.dataset.place === `${place.name}|${place.x}|${place.y}`));
@@ -138,13 +142,14 @@ $('copy-link').onclick = async () => {
 function revealDestination(targetId = 'destination') {
   if ($(targetId).hidden) targetId = 'destination';
   $('query').blur?.();
-  $(targetId === 'route-panel' ? 'route-destination-label' : 'place-name').focus?.({preventScroll:true});
+  $(targetId === 'route-panel' ? 'route-destination-input' : 'place-name').focus?.({preventScroll:true});
   if (targetId === 'route-panel' || !window.matchMedia?.('(min-width: 900px)').matches) {
     // Let the keyboard/focus change settle before positioning the selected place.
     const reveal = () => $(targetId).scrollIntoView({ behavior: 'auto', block: 'start' });
     if (window.requestAnimationFrame) window.requestAnimationFrame(reveal); else reveal();
   }
 }
+$('route-destination-change').onclick = () => { $('query').focus(); $('query').select(); $('query').scrollIntoView({behavior:'auto',block:'center'}); };
 $('sample-button').onclick = () => { selectPlace(sample, true); revealDestination(); };
 $('copy-address').onclick = async () => {
   if (!state.selected) return;
@@ -237,11 +242,11 @@ function prepareLaunch(app) {
   return true;
 }
 // Keep app launches synchronous inside the user gesture; do not await network work here.
-$('tmap-button').onclick = () => {
+$('route-tmap-launch').onclick = $('tmap-button').onclick = () => {
   try { if (prepareLaunch('tmap')) window.location.href = tmapUrl(state.selected,os); }
   catch { toast('앱을 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
 };
-$('kakao-button').onclick = () => {
+$('route-kakao-launch').onclick = $('kakao-button').onclick = () => {
   if (!state.naviReady) { toast('카카오내비 연결을 준비 중입니다. 잠시 후 다시 눌러 주세요.'); return; }
   try { if (prepareLaunch('kakao')) Kakao.Navi.start(kakaoDestination(state.selected)); }
   catch { $('launch-message').textContent = '카카오내비를 열지 못했습니다. 연결 설정을 확인해 주세요.'; }
