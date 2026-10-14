@@ -8,8 +8,8 @@
   <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
   <title>바로길 · 원하는 내비로 바로 출발</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20261014.6">
-  <script type="module" src="./app.js?v=20261014.6"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261014.7">
+  <script type="module" src="./app.js?v=20261014.7"></script>
 </head>
 <body>
   <div class="bg-orbs" aria-hidden="true"></div>
@@ -54,7 +54,7 @@
       <div class="share-section"><div><strong>함께 갈 사람에게 보내세요</strong><p>같은 목적지, 각자 원하는 내비로.</p></div><div class="share-actions"><button id="share-button" class="primary"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg>목적지 링크 공유</button><button id="copy-link" class="secondary">링크 복사</button></div><div id="share-fallback" hidden><label for="share-url">아래 링크를 길게 눌러 복사하세요.</label><input id="share-url" readonly type="text" aria-label="목적지 공유 링크"></div></div>
     </section>
     <p id="empty-state" class="map-empty-hint">어디로 갈까요? 주소나 장소를 검색해 주세요.</p>
-    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.14.6</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
+    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.14.7</span></span><span>찾고, 고르고, 출발하세요.</span></footer>
   </main>
   <dialog id="group-library-dialog" aria-labelledby="group-library-title"><h2 id="group-library-title">모임 열기</h2><p>이 브라우저에서 만들거나 열었던 최근 30개 링크와 작성 중인 모임입니다. 모임을 누르면 목적지 목록이 열립니다. 편집을 누르면 현재 작성 목록이 선택한 모임으로 바뀝니다.</p><p id="group-library-empty">저장된 모임이 없습니다. 받은 링크를 아래에 붙여넣어 주세요.</p><div id="group-library-list"></div><label for="group-library-url">받은 모임 링크</label><input id="group-library-url" type="url" placeholder="모임 링크 붙여넣기"><p id="group-library-error" role="status"></p><button id="group-library-load" class="primary" type="button">링크 열기</button><button id="group-library-close" class="secondary" type="button">닫기</button></dialog>
   <dialog id="group-order-dialog" aria-labelledby="group-order-title"><h2 id="group-order-title">목적지 순서 변경</h2><p>⠿ 손잡이를 끌어서 순서를 바꾸세요. 기존에 보낸 링크는 그대로 유지됩니다.</p><div id="group-order-list"></div><label for="group-order-url">변경한 순서의 새 링크</label><input id="group-order-url" readonly><button id="group-order-copy" type="button" class="secondary">새 링크 복사</button><button id="group-order-apply" type="button" class="primary">이 순서로 보기</button><button id="group-order-close" type="button" class="secondary">닫기</button></dialog>
