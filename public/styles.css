@@ -52,3 +52,5 @@ dialog{width:min(480px,calc(100% - 28px));max-height:88dvh;padding:27px;border:1
 @media(max-width:540px){.header{padding:12px 16px 6px}.map-home{padding:6px 12px 0}.map-home .map-wrap{height:30vh;min-height:210px;max-height:290px}.map-home .preset-card{flex-basis:125px}.map-home .destination{padding:13px}.map-home .share-section{margin-top:10px;padding-top:10px}.map-home .route-summary>strong{font-size:25px}}
 
 #group-close-bottom{display:block;width:100%;margin-top:20px;min-height:44px}
+
+.group-entry{display:flex;justify-content:flex-end;margin:6px 0}.group-search-row,.group-draft-row{display:flex;align-items:center;gap:8px}.group-search-row input,.group-draft-row span{min-width:0;flex:1}.group-draft-row{margin:8px 0;font-size:13px}.group-draft-row span{overflow-wrap:anywhere}.group-draft-row button{flex:none}#group-search-results{display:grid;gap:6px;margin:10px 0;max-height:220px;overflow:auto}#group-search-results button{text-align:left;white-space:normal}

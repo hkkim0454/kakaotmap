@@ -2,7 +2,7 @@ import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigat
 import { createGroupUrl, readGroupUrl } from './group-share.js?v=20261014.1';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
-import { createPresetStore } from './presets-store.js';
+import { validatePreset } from './presets-store.js';
 import { mountPresets } from './presets-ui.js?v=20261014.1';
 import { mountRoutePanel } from './route-panel.js?v=20261014.1';
 import { createMapView } from './map-view.js?v=20261014.1';
@@ -15,7 +15,7 @@ const storage = { get() { try { return localStorage.getItem('barogil-kakao-key')
 let toastTimer;
 let sharedLinkError = '';
 let presets;
-let groupSnapshot = null, groupLinkInvalid = false, groupCandidates = [];
+let groupSnapshot = null, groupLinkInvalid = false;
 try { groupSnapshot = readGroupUrl(location.href); } catch (error) { sharedLinkError = error.message; groupLinkInvalid = true; }
 
 const routePanel = mountRoutePanel({ document, navigator, getDestination: () => state.selected,
@@ -254,24 +254,66 @@ $('route-kakao-launch').onclick = () => {
   catch { toast('카카오내비를 열지 못했습니다. 잠시 후 다시 눌러 주세요.'); }
 };
 
-$('group-create').onclick = () => {
-  const choices = [state.selected,...(presets?.getPlaces() || [])].filter(Boolean);
-  groupCandidates = [...new Map(choices.map(p=>[p.name+'|'+p.x+'|'+p.y,p])).values()];
+const draftKey = 'barogil-group-draft-v1';
+let draft = {name:'',places:[]}, groupSearchId=0;
+try {
+  const saved=JSON.parse(localStorage.getItem(draftKey));
+  if(saved && typeof saved.name==='string' && saved.name.length<=60 && Array.isArray(saved.places) && saved.places.length<=8)
+    draft={name:saved.name,places:saved.places.map(validatePreset)};
+} catch { /* Empty draft when storage is unavailable or invalid. */ }
+function saveDraft() {
+  draft.name=$('group-name').value;
+  $('group-output').hidden=true;
+  try {localStorage.setItem(draftKey,JSON.stringify(draft));$('group-error').textContent='';}
+  catch {$('group-error').textContent='이 브라우저에 임시 저장할 수 없습니다. 닫기 전에 링크를 복사해 주세요.';}
+}
+function renderDraft() {
   $('group-choices').replaceChildren();
-  const legend=document.createElement('legend');legend.textContent='포함할 목적지 (최대 8개)';$('group-choices').append(legend);
-  groupCandidates.forEach((p,i)=>{const label=document.createElement('label'),input=document.createElement('input'),span=document.createElement('span');input.type='checkbox';input.value=String(i);input.checked=i<8;span.textContent=p.name+(p.address ? " · "+p.address : "");label.append(input,span);$('group-choices').append(label);});
-  $('group-error').textContent=choices.length ? '' : '먼저 목적지를 검색해 선택하거나 저장된 목적지를 불러와 주세요.';
-  $('group-output').hidden=true;$('group-dialog').showModal();
+  const legend=document.createElement('legend');legend.textContent=`모임 목적지 (${draft.places.length}/8)`;$('group-choices').append(legend);
+  draft.places.forEach((p,i)=>{
+    const row=document.createElement('div'),span=document.createElement('span'),button=document.createElement('button');
+    row.className='group-draft-row';span.textContent=p.name+' · '+p.address;
+    button.type='button';button.className='text-button';button.textContent='삭제';button.setAttribute('aria-label',p.name+' 삭제');
+    button.onclick=()=>{draft.places.splice(i,1);saveDraft();renderDraft();};row.append(span,button);$('group-choices').append(row);
+  });
+}
+function addDraft(place) {
+  if(draft.places.some(p=>p.name===place.name && p.x===place.x && p.y===place.y)) {$('group-error').textContent='이미 추가한 목적지입니다.';return;}
+  if(draft.places.length>=8){$('group-error').textContent='목적지는 최대 8개까지 추가할 수 있습니다.';return;}
+  draft.places.push(validatePreset(place));saveDraft();renderDraft();
+}
+$('group-create').onclick=()=>{
+  $('group-name').value=draft.name;renderDraft();$('group-output').hidden=true;$('group-error').textContent='';
+  $('group-add-selected').hidden=!state.selected;$('group-search-results').replaceChildren();$('group-search-query').value='';
+  $('group-dialog').showModal();
 };
+$('group-add-selected').onclick=()=>{if(state.selected)addDraft(state.selected);};
+$('group-name').oninput=saveDraft;
 $('group-close-bottom').onclick=$('group-close').onclick=()=>$('group-dialog').close();
-$('group-form').oninput=()=>{ $('group-output').hidden=true; };
+$('group-dialog').onclose=()=>{groupSearchId++;$('group-search-button').disabled=false;};
+$('group-search-query').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();$('group-search-button').click();}};
+$('group-search-query').oninput=()=>{groupSearchId++;$('group-search-results').replaceChildren();$('group-search-button').disabled=false;};
+$('group-search-button').onclick=async()=>{
+  const query=$('group-search-query').value.trim();if(!query)return;
+  if(!state.mapsReady){$('group-error').textContent='지도 연결 후 다시 검색해 주세요.';return;}
+  const id=++groupSearchId;$('group-search-button').disabled=true;$('group-search-results').replaceChildren();$('group-error').textContent='검색 중…';
+  try {
+    const places=new kakao.maps.services.Places(),geocoder=new kakao.maps.services.Geocoder();
+    const results=await Promise.all([sdkSearch(cb=>places.keywordSearch(query,cb,{size:5})),sdkSearch(cb=>geocoder.addressSearch(query,cb,{size:5}))]);
+    if(id!==groupSearchId)return;
+    if(results.every(r=>r.failed))throw new Error();
+    const rows=normalizeResults(results.flatMap(r=>r.rows));$('group-error').textContent=rows.length?'':'검색 결과가 없습니다.';
+    rows.forEach(p=>{const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=p.name+' · '+p.address+' ＋';button.onclick=()=>addDraft(p);$('group-search-results').append(button);});
+  } catch {if(id===groupSearchId)$('group-error').textContent='검색하지 못했습니다. 다시 시도해 주세요.';}
+  finally {if(id===groupSearchId)$('group-search-button').disabled=false;}
+};
 $('group-form').onsubmit=event=>{event.preventDefault();try {
-  const places=[...$('group-choices').querySelectorAll('input:checked')].map(input=>groupCandidates[Number(input.value)]);
-  $('group-url').value=createGroupUrl(location.href,$('group-name').value,places);
+  $('group-url').value=createGroupUrl(location.href,$('group-name').value,draft.places);
   $('group-output').hidden=false;$('group-error').textContent='';
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
 $('group-copy').onclick=async()=>{try{await copyText($('group-url').value);toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
+  $('shared-presets').hidden=false;
   $('presets-title').textContent=groupSnapshot.name;
   document.title=groupSnapshot.name+' · 바로길';
   $('presets-manage').hidden=true;
@@ -287,11 +329,9 @@ async function initialize() {
       const config = await response.json();
       state.configKey = config.kakaoJavascriptKey;
       routePanel.configure(config.routeApiUrl);
-      if (config.firebase && !groupSnapshot && !groupLinkInvalid) presets = mountPresets({document,window,store:createPresetStore(config.firebase),
-        getSelected:()=>state.selected,onSelect:place=>{selectPlace(place,false,true);revealDestination('route-panel');}});
+
     }
   } catch { /* Browser setting is also supported. */ }
-  if (!presets) $('presets-status').textContent = '공용 목적지 설정을 불러오지 못했습니다. 페이지를 새로고침해 주세요.';
   const key = storage.get() || state.configKey;
   if (!key) { notice(sharedLinkError || '처음 사용하시나요? 연결 설정을 완료하면 장소 검색과 카카오내비를 사용할 수 있습니다.'); return; }
   notice('검색과 내비 서비스를 연결하고 있습니다…');
