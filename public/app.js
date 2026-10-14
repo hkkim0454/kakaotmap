@@ -256,11 +256,16 @@ $('route-kakao-launch').onclick = () => {
 };
 
 const libraryKey='barogil-group-library-v1';
+const deletedGroupsKey='barogil-deleted-groups-v1';
+let deletedGroups=[];
+try{const saved=JSON.parse(localStorage.getItem(deletedGroupsKey));if(Array.isArray(saved))deletedGroups=saved.filter(url=>typeof url==='string');}catch{}
 let groupLibrary=[];
 try {const saved=JSON.parse(localStorage.getItem(libraryKey));if(Array.isArray(saved))groupLibrary=saved.filter(item=>{try{return typeof item.url==='string' && !!readGroupUrl(item.url);}catch{return false;}}).slice(0,30);}catch{}
-function rememberGroup(url) {
+function rememberGroup(url,explicit=true) {
+  if(!explicit && deletedGroups.includes(url))return;
   try {
     const group=readGroupUrl(url);if(!group)return;
+    if(explicit && deletedGroups.includes(url)){deletedGroups=deletedGroups.filter(item=>item!==url);localStorage.setItem(deletedGroupsKey,JSON.stringify(deletedGroups));}
     groupLibrary=[{name:group.name,url},...groupLibrary.filter(item=>item.url!==url)].slice(0,30);
     localStorage.setItem(libraryKey,JSON.stringify(groupLibrary));
   }catch {toast('모임 목록을 이 브라우저에 저장하지 못했습니다. 링크를 복사해 주세요.');}
@@ -279,13 +284,26 @@ function loadGroup(url) {
     $('group-name').value=draft.name;saveDraft();$('group-library-dialog').close();$('group-create').click();
   }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
 }
-$('group-library-open').onclick=()=>{
+function renderLibrary() {
   $('group-library-list').replaceChildren();$('group-library-error').textContent='';$('group-library-url').value='';
   const entries=[...groupLibrary];
   if(draft.name.trim() && draft.places.length){const url=createGroupUrl(location.href,draft.name,draft.places);if(!entries.some(item=>item.url===url))entries.unshift({url,draft:true});}
-  entries.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=(item.draft?'작성 중 · ':'')+group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);row.append(button,edit);$('group-library-list').append(row);});
-  $('group-library-empty').hidden=entries.length>0;$('group-library-dialog').showModal();
-};
+  entries.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=(item.draft?'작성 중 · ':'')+group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);const remove=document.createElement('button');remove.type='button';remove.className='text-button library-delete';remove.textContent='삭제';remove.setAttribute('aria-label',group.name+' 삭제');remove.onclick=()=>deleteGroup(item.url,group.name);row.append(button,edit,remove);$('group-library-list').append(row);});
+  $('group-library-empty').hidden=entries.length>0;
+}
+$('group-library-open').onclick=()=>{renderLibrary();$('group-library-dialog').showModal();};
+function deleteGroup(url,name) {
+  if(!window.confirm(`‘${name}’을 이 브라우저의 모임 목록에서 삭제할까요? 공유한 링크는 유지됩니다.`))return;
+  try {
+    const remaining=groupLibrary.filter(item=>item.url!==url);
+    const deleted=[...new Set([...deletedGroups,url])];
+    const matchesDraft=draft.name.trim() && draft.places.length && createGroupUrl(location.href,draft.name,draft.places)===url;
+    localStorage.setItem(deletedGroupsKey,JSON.stringify(deleted));
+    localStorage.setItem(libraryKey,JSON.stringify(remaining));
+    if(matchesDraft){localStorage.removeItem(draftKey);draft={name:'',places:[]};}
+    deletedGroups=deleted;groupLibrary=remaining;renderLibrary();toast('이 브라우저의 목록에서 삭제했습니다.');
+  }catch {$('group-library-error').textContent='삭제하지 못했습니다. 브라우저 저장 공간을 확인해 주세요.';}
+}
 $('group-library-load').onclick=()=>openGroup($('group-library-url').value);
 $('group-library-close').onclick=()=>$('group-library-dialog').close();
 const draftKey = 'barogil-group-draft-v1';
@@ -363,7 +381,7 @@ $('group-form').onsubmit=event=>{event.preventDefault();try {
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
 $('group-copy').onclick=async()=>{try{await copyText($('group-url').value);toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
-  rememberGroup(createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places));
+  rememberGroup(createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places),false);
   $('shared-presets').hidden=false;
   $('presets-title').textContent=groupSnapshot.name;
   document.title=groupSnapshot.name+' · 바로길';
