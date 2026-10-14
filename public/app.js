@@ -265,6 +265,13 @@ function rememberGroup(url) {
     localStorage.setItem(libraryKey,JSON.stringify(groupLibrary));
   }catch {toast('모임 목록을 이 브라우저에 저장하지 못했습니다. 링크를 복사해 주세요.');}
 }
+function openGroup(url) {
+  try {
+    const group=readGroupUrl(url.trim());if(!group)throw new Error();
+    const safeUrl=createGroupUrl(location.href,group.name,group.places);
+    rememberGroup(safeUrl);$('group-library-dialog').close();location.href=safeUrl;
+  }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
+}
 function loadGroup(url) {
   try {
     const group=readGroupUrl(url.trim());if(!group)throw new Error();
@@ -274,10 +281,10 @@ function loadGroup(url) {
 }
 $('group-library-open').onclick=()=>{
   $('group-library-list').replaceChildren();$('group-library-error').textContent='';$('group-library-url').value='';
-  groupLibrary.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>loadGroup(item.url);$('group-library-list').append(button);});
+  groupLibrary.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);row.append(button,edit);$('group-library-list').append(row);});
   $('group-library-empty').hidden=groupLibrary.length>0;$('group-library-dialog').showModal();
 };
-$('group-library-load').onclick=()=>loadGroup($('group-library-url').value);
+$('group-library-load').onclick=()=>openGroup($('group-library-url').value);
 $('group-library-close').onclick=()=>$('group-library-dialog').close();
 const draftKey = 'barogil-group-draft-v1';
 let draft = {name:'',places:[]}, groupSearchId=0;
@@ -293,8 +300,20 @@ function saveDraft() {
   catch {$('group-error').textContent='이 브라우저에 임시 저장할 수 없습니다. 닫기 전에 링크를 복사해 주세요.';}
 }
 function moveButtons(places,i,onMove) {
-  const controls=document.createElement('span');controls.className='order-controls';
-  [-1,1].forEach(delta=>{const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=delta<0?'↑':'↓';button.disabled=i+delta<0||i+delta>=places.length;button.setAttribute('aria-label',places[i].name+(delta<0?' 앞으로 이동':' 뒤로 이동'));button.onclick=()=>{[places[i],places[i+delta]]=[places[i+delta],places[i]];onMove();};controls.append(button);});return controls;
+  const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.textContent='⠿';
+  handle.setAttribute('aria-label',places[i].name+' 순서 이동');handle.title='끌어서 순서 변경 (키보드: 위·아래 방향키)';
+  const move=to=>{if(to===i||to<0||to>=places.length)return;const [place]=places.splice(i,1);places.splice(to,0,place);onMove();};
+  handle.onkeydown=event=>{if(event.key==='ArrowUp'||event.key==='ArrowDown'){event.preventDefault();move(i+(event.key==='ArrowUp'?-1:1));}};
+  handle.onpointerdown=event=>{
+    if(event.button!==0)return;event.preventDefault();
+    const row=handle.closest('.group-draft-row'),list=row.parentElement,rows=[...list.querySelectorAll('.group-draft-row')];
+    let target=i;row.classList.add('dragging');handle.setPointerCapture(event.pointerId);
+    const clear=()=>{rows.forEach(r=>r.classList.remove('drop-target','dragging'));handle.onpointermove=handle.onpointerup=handle.onpointercancel=null;};
+    handle.onpointermove=e=>{const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.group-draft-row');target=rows.indexOf(hit);rows.forEach((r,n)=>r.classList.toggle('drop-target',n===target&&n!==i));};
+    handle.onpointerup=e=>{if(handle.hasPointerCapture(e.pointerId))handle.releasePointerCapture(e.pointerId);clear();move(target);};
+    handle.onpointercancel=clear;
+  };
+  return handle;
 }
 function renderDraft() {
   $('group-choices').replaceChildren();
