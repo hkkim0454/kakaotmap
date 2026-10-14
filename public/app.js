@@ -1,3 +1,4 @@
+import { shortenLink, expandLink } from './short-links.js?v=20261014.8';
 import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigation.js';
 import { createGroupUrl, readGroupUrl } from './group-share.js?v=20261014.1';
 import { createShareUrl, readSharedPlace } from './share.js';
@@ -124,6 +125,10 @@ $('presets-manage').onclick = () => {
   document.querySelectorAll('.preset-actions').forEach(el=>{el.hidden=!expanded;});
 };
 document.querySelectorAll('.preset-actions').forEach(el=>{el.hidden=true;});
+async function compactLink(url) {
+  if(url.startsWith('https://barogil-route-api.hkkim0454.workers.dev/s/'))return url;
+  try{return await shortenLink(url);}catch(error){toast(error.message+' 기존 링크를 사용합니다.');return url;}
+}
 function shareLink() { return createShareUrl(location.href,state.selected); }
 async function copyText(text) {
   if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
@@ -138,7 +143,7 @@ function showShareFallback(url) {
 }
 $('share-button').onclick = async () => {
   if (!state.selected) return;
-  const url = shareLink();
+  const url = await compactLink(shareLink());
   try {
     if (navigator.share) await navigator.share({title:state.selected.name,text:`${state.selected.name} 길 안내`,url});
     else { await copyText(url); toast('목적지 링크를 복사했습니다. 원하는 사람에게 보내세요.'); }
@@ -146,7 +151,7 @@ $('share-button').onclick = async () => {
 };
 $('copy-link').onclick = async () => {
   if (!state.selected) return;
-  const url = shareLink();
+  const url = await compactLink(shareLink());
   try { await copyText(url); toast('목적지 링크를 복사했습니다.'); }
   catch { showShareFallback(url); }
 };
@@ -270,16 +275,16 @@ function rememberGroup(url,explicit=true) {
     localStorage.setItem(libraryKey,JSON.stringify(groupLibrary));
   }catch {toast('모임 목록을 이 브라우저에 저장하지 못했습니다. 링크를 복사해 주세요.');}
 }
-function openGroup(url) {
+async function openGroup(url) {
   try {
-    const group=readGroupUrl(url.trim());if(!group)throw new Error();
+    const group=readGroupUrl(await expandLink(url.trim()));if(!group)throw new Error();
     const safeUrl=createGroupUrl(location.href,group.name,group.places);
     rememberGroup(safeUrl);$('group-library-dialog').close();location.href=safeUrl;
   }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
 }
-function loadGroup(url) {
+async function loadGroup(url) {
   try {
-    const group=readGroupUrl(url.trim());if(!group)throw new Error();
+    const group=readGroupUrl(await expandLink(url.trim()));if(!group)throw new Error();
     draft={name:group.name,places:group.places.map(p=>({...p}))};
     $('group-name').value=draft.name;saveDraft();$('group-library-dialog').close();$('group-create').click();
   }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
@@ -375,11 +380,12 @@ $('group-search-button').onclick=async()=>{
   } catch {if(id===groupSearchId)$('group-error').textContent='검색하지 못했습니다. 다시 시도해 주세요.';}
   finally {if(id===groupSearchId)$('group-search-button').disabled=false;}
 };
-$('group-form').onsubmit=event=>{event.preventDefault();try {
+$('group-form').onsubmit=async event=>{event.preventDefault();try {
   $('group-url').value=createGroupUrl(location.href,$('group-name').value,draft.places);
-  rememberGroup($('group-url').value);$('group-output').hidden=false;$('group-error').textContent='';
+  const original=$('group-url').value;rememberGroup(original);$('group-output').hidden=false;$('group-error').textContent='짧은 링크를 만들고 있습니다…';
+  const compact=await compactLink(original);if(!$('group-output').hidden && $('group-url').value===original){$('group-url').value=compact;$('group-error').textContent=compact===original?'현재 기존 링크를 사용할 수 있습니다.':'';}
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
-$('group-copy').onclick=async()=>{try{await copyText($('group-url').value);toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
+$('group-copy').onclick=async()=>{try{await copyText(await compactLink($('group-url').value));toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
   rememberGroup(createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places),false);
   $('shared-presets').hidden=false;
@@ -400,7 +406,7 @@ function renderOrder() {
 }
 $('group-order-open').onclick=()=>{orderedPlaces=groupSnapshot.places.map(p=>({...p}));renderOrder();$('group-order-dialog').showModal();};
 $('group-order-close').onclick=()=>$('group-order-dialog').close();
-$('group-order-copy').onclick=async()=>{rememberGroup($('group-order-url').value);try{await copyText($('group-order-url').value);toast('변경한 순서의 새 링크를 복사했습니다.');}catch{$('group-order-url').focus();$('group-order-url').select();}};
+$('group-order-copy').onclick=async()=>{rememberGroup($('group-order-url').value);try{await copyText(await compactLink($('group-order-url').value));toast('변경한 순서의 새 링크를 복사했습니다.');}catch{$('group-order-url').focus();$('group-order-url').select();}};
 $('group-order-apply').onclick=()=>{rememberGroup($('group-order-url').value);$('group-order-dialog').close();location.href=$('group-order-url').value;};
 async function initialize() {
   try {
