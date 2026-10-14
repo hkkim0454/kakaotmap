@@ -58,3 +58,5 @@ dialog{width:min(480px,calc(100% - 28px));max-height:88dvh;padding:27px;border:1
 .order-controls{display:flex;flex:none!important;gap:4px}.order-controls button{min-width:40px;min-height:44px;padding:8px}#group-order-dialog>button{display:block;width:100%;margin-top:12px}
 
 .group-entry{gap:8px}#group-library-list{display:grid;gap:8px;max-height:35vh;overflow:auto;margin:12px 0}#group-library-list button{text-align:left;overflow-wrap:anywhere}#group-library-dialog>button{display:block;width:100%;margin-top:12px}
+
+.drag-handle{cursor:grab;touch-action:none;flex:none;min-width:44px;min-height:44px;font-size:26px;color:var(--accent-2);background:var(--tint);border:0;border-radius:10px}.dragging{opacity:.5}.drop-target{outline:2px solid var(--accent);border-radius:10px;background:var(--tint)}.library-row{display:flex;gap:6px;align-items:center}.library-row>.secondary{flex:1;min-width:0}.library-row>.text-button{flex:none}
