@@ -281,8 +281,10 @@ function loadGroup(url) {
 }
 $('group-library-open').onclick=()=>{
   $('group-library-list').replaceChildren();$('group-library-error').textContent='';$('group-library-url').value='';
-  groupLibrary.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);row.append(button,edit);$('group-library-list').append(row);});
-  $('group-library-empty').hidden=groupLibrary.length>0;$('group-library-dialog').showModal();
+  const entries=[...groupLibrary];
+  if(draft.name.trim() && draft.places.length){const url=createGroupUrl(location.href,draft.name,draft.places);if(!entries.some(item=>item.url===url))entries.unshift({url,draft:true});}
+  entries.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=(item.draft?'작성 중 · ':'')+group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);row.append(button,edit);$('group-library-list').append(row);});
+  $('group-library-empty').hidden=entries.length>0;$('group-library-dialog').showModal();
 };
 $('group-library-load').onclick=()=>openGroup($('group-library-url').value);
 $('group-library-close').onclick=()=>$('group-library-dialog').close();
@@ -361,6 +363,7 @@ $('group-form').onsubmit=event=>{event.preventDefault();try {
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
 $('group-copy').onclick=async()=>{try{await copyText($('group-url').value);toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
+  rememberGroup(createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places));
   $('shared-presets').hidden=false;
   $('presets-title').textContent=groupSnapshot.name;
   document.title=groupSnapshot.name+' · 바로길';
