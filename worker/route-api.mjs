@@ -1,8 +1,8 @@
 // Paste this entire file into Cloudflare Worker > Edit code > Deploy.
 // Secrets: TMAP_APP_KEY, KAKAO_REST_API_KEY. D1 binding: ROUTE_DB.
-// No API keys or location history are stored in this file/database.
+// Short links store only explicitly shared destination URLs; no API keys or origin history.
 const SITE = 'https://hkkim0454.github.io';
-const VERSION = '2026-10-13.3';
+const VERSION = '2026-10-14.1';
 const DAILY_LIMIT = 400;
 const SCHEMA = 'CREATE TABLE IF NOT EXISTS route_usage (day TEXT PRIMARY KEY, used INTEGER NOT NULL)';
 const RESERVE = `INSERT INTO route_usage(day, used) VALUES (?1, 1)
@@ -34,7 +34,7 @@ function normalized(provider, distance, duration, toll) {
   if (!metric(distance) || !metric(duration)) throw new Error('Invalid route');
   return { provider, status: 'ok', distanceMeters: distance, durationSeconds: duration, tollWon: metric(toll) ? toll : null };
 }
-async function readJson(request) {
+async function readJson(request, limit = 2048) {
   if (!request.headers.get('Content-Type')?.toLowerCase().startsWith('application/json')) throw new Error('JSON required');
   const reader = request.body?.getReader();
   if (!reader) throw new Error('Body required');
@@ -44,7 +44,7 @@ async function readJson(request) {
       const { done, value } = await reader.read();
       if (done) break;
       length += value.length;
-      if (length > 2048) { await reader.cancel(); throw new Error('Body too large'); }
+      if (length > limit) { await reader.cancel(); throw new Error('Body too large'); }
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }
@@ -101,6 +101,48 @@ async function queryProvider(provider, origin, destination, env, fetcher) {
   } finally { clearTimeout(timer); }
 }
 
+const LINK_SCHEMA='CREATE TABLE IF NOT EXISTS share_links (id TEXT PRIMARY KEY, url TEXT NOT NULL, created_day TEXT NOT NULL);\nCREATE INDEX IF NOT EXISTS share_links_day ON share_links(created_day);';
+function validSharedUrl(raw) {
+  if(typeof raw!=='string'||raw.length>12000)return false;
+  try {
+    const u=new URL(raw);if(u.origin!==SITE||u.pathname!=='/kakaotmap/'||u.username||u.password)return false;
+    const place=p=>p && typeof p.name==='string' && p.name.trim().length>0 && p.name.length<=120 && typeof p.address==='string' && p.address.length<=240 && validPoint(p) && Object.keys(p).every(k=>['name','address','x','y'].includes(k));
+    if(u.hash.startsWith('#group=')) {
+      if(u.search)return false;
+      const encoded=u.hash.slice(7);if(!/^[\w-]+$/.test(encoded))return false;
+      const g=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(atob(encoded.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0))));
+      return g.v===1 && typeof g.name==='string' && g.name.trim().length>0 && g.name.length<=60 && Array.isArray(g.places) && g.places.length>0 && g.places.length<=8 && g.places.every(place) && Object.keys(g).every(k=>['v','name','places'].includes(k));
+    }
+    if(u.hash||[...u.searchParams.keys()].some(k=>!['name','address','x','y'].includes(k)))return false;
+    if(['name','address','x','y'].some(k=>u.searchParams.getAll(k).length!==1)||!u.searchParams.get('x').trim()||!u.searchParams.get('y').trim())return false;
+    return place({name:u.searchParams.get('name'),address:u.searchParams.get('address'),x:Number(u.searchParams.get('x')),y:Number(u.searchParams.get('y'))});
+  }catch{return false;}
+}
+async function shareRequest(request,env,path,json,now) {
+  if(!env.ROUTE_DB)return json({error:'공유 저장소 연결이 필요합니다.'},503);
+  try {
+    await env.ROUTE_DB.exec(LINK_SCHEMA);
+    if(path==='/links') {
+      if(request.method!=='POST')return json({error:'POST 요청이 필요합니다.'},405);
+      if(request.headers.get('Origin')!==SITE)return json({error:'허용되지 않은 사이트입니다.'},403);
+      let body;try{body=await readJson(request,16384);}catch{return json({error:'공유 정보가 올바르지 않습니다.'},400);}
+      if(!validSharedUrl(body?.url))return json({error:'바로길 목적지 링크만 저장할 수 있습니다.'},400);
+      const day=new Date(now().getTime()+9*3600000).toISOString().slice(0,10);
+      const id=crypto.randomUUID().replaceAll('-','').slice(0,20);
+      // Global daily cap independent from paid route APIs; insert is atomic.
+      const row=await env.ROUTE_DB.prepare('INSERT INTO share_links(id,url,created_day) SELECT ?1,?2,?3 WHERE (SELECT COUNT(*) FROM share_links WHERE created_day=?3)<200 RETURNING id').bind(id,body.url,day).first();
+      if(!row)return json({error:'오늘의 새 공유 링크 생성 한도에 도달했습니다.'},429);
+      return json({id:row.id},201);
+    }
+    if(request.method!=='GET')return json({error:'GET 요청이 필요합니다.'},405);
+    const match=path.match(/^\/(?:s|links)\/([a-f0-9]{20})$/);if(!match)return json({error:'링크를 찾을 수 없습니다.'},404);
+    const row=await env.ROUTE_DB.prepare('SELECT url FROM share_links WHERE id=?1').bind(match[1]).first();
+    if(!row||!validSharedUrl(row.url))return json({error:'링크를 찾을 수 없습니다.'},404);
+    if(path.startsWith('/s/'))return new Response(null,{status:302,headers:{Location:row.url,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
+    return json({url:row.url});
+  }catch{return json({error:'공유 링크 저장소에 연결하지 못했습니다.'},503);}
+}
+
 export async function handleRequest(request, env, fetcher = fetch, now = () => new Date()) {
   const origin = request.headers.get('Origin');
   const headers = { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', Vary: 'Origin' };
@@ -116,6 +158,7 @@ export async function handleRequest(request, env, fetcher = fetch, now = () => n
   if (path === '/health' && request.method === 'GET') {
     return json({ service: 'barogil-route-api', version: VERSION, configured, dailyLimit: DAILY_LIMIT });
   }
+  if(path==='/links'||path.startsWith('/links/')||path.startsWith('/s/'))return shareRequest(request,env,path,json,now);
   if (path !== '/compare') return json({ error: '경로 비교는 POST /compare, 설정 확인은 GET /health를 사용하세요.' }, 404);
   if (request.method !== 'POST') return json({ error: 'POST 요청이 필요합니다.' }, 405);
   if (!Object.values(configured).every(Boolean)) return json({ error: '서버의 API 키 또는 ROUTE_DB 연결이 필요합니다.' }, 503);
