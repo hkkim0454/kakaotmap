@@ -97,6 +97,7 @@ function drawMap() {
   } catch { $('map-placeholder').hidden = false; $('map-placeholder').querySelector('p').textContent = '지도를 불러오지 못했습니다. 검색과 소요시간 비교는 계속 이용할 수 있습니다.'; }
 }
 window.addEventListener('resize', () => drawMap());
+window.addEventListener('hashchange', () => location.reload());
 function selectPlace(place, example = false, currentLocation = false) {
   notice('');
   state.selected = place;
@@ -254,6 +255,30 @@ $('route-kakao-launch').onclick = () => {
   catch { toast('카카오내비를 열지 못했습니다. 잠시 후 다시 눌러 주세요.'); }
 };
 
+const libraryKey='barogil-group-library-v1';
+let groupLibrary=[];
+try {const saved=JSON.parse(localStorage.getItem(libraryKey));if(Array.isArray(saved))groupLibrary=saved.filter(item=>{try{return typeof item.url==='string' && !!readGroupUrl(item.url);}catch{return false;}}).slice(0,30);}catch{}
+function rememberGroup(url) {
+  try {
+    const group=readGroupUrl(url);if(!group)return;
+    groupLibrary=[{name:group.name,url},...groupLibrary.filter(item=>item.url!==url)].slice(0,30);
+    localStorage.setItem(libraryKey,JSON.stringify(groupLibrary));
+  }catch {toast('모임 목록을 이 브라우저에 저장하지 못했습니다. 링크를 복사해 주세요.');}
+}
+function loadGroup(url) {
+  try {
+    const group=readGroupUrl(url.trim());if(!group)throw new Error();
+    draft={name:group.name,places:group.places.map(p=>({...p}))};
+    $('group-name').value=draft.name;saveDraft();$('group-library-dialog').close();$('group-create').click();
+  }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
+}
+$('group-library-open').onclick=()=>{
+  $('group-library-list').replaceChildren();$('group-library-error').textContent='';$('group-library-url').value='';
+  groupLibrary.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>loadGroup(item.url);$('group-library-list').append(button);});
+  $('group-library-empty').hidden=groupLibrary.length>0;$('group-library-dialog').showModal();
+};
+$('group-library-load').onclick=()=>loadGroup($('group-library-url').value);
+$('group-library-close').onclick=()=>$('group-library-dialog').close();
 const draftKey = 'barogil-group-draft-v1';
 let draft = {name:'',places:[]}, groupSearchId=0;
 try {
@@ -267,6 +292,10 @@ function saveDraft() {
   try {localStorage.setItem(draftKey,JSON.stringify(draft));$('group-error').textContent='';}
   catch {$('group-error').textContent='이 브라우저에 임시 저장할 수 없습니다. 닫기 전에 링크를 복사해 주세요.';}
 }
+function moveButtons(places,i,onMove) {
+  const controls=document.createElement('span');controls.className='order-controls';
+  [-1,1].forEach(delta=>{const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=delta<0?'↑':'↓';button.disabled=i+delta<0||i+delta>=places.length;button.setAttribute('aria-label',places[i].name+(delta<0?' 앞으로 이동':' 뒤로 이동'));button.onclick=()=>{[places[i],places[i+delta]]=[places[i+delta],places[i]];onMove();};controls.append(button);});return controls;
+}
 function renderDraft() {
   $('group-choices').replaceChildren();
   const legend=document.createElement('legend');legend.textContent=`모임 목적지 (${draft.places.length}/8)`;$('group-choices').append(legend);
@@ -274,7 +303,7 @@ function renderDraft() {
     const row=document.createElement('div'),span=document.createElement('span'),button=document.createElement('button');
     row.className='group-draft-row';span.textContent=p.name+' · '+p.address;
     button.type='button';button.className='text-button';button.textContent='삭제';button.setAttribute('aria-label',p.name+' 삭제');
-    button.onclick=()=>{draft.places.splice(i,1);saveDraft();renderDraft();};row.append(span,button);$('group-choices').append(row);
+    button.onclick=()=>{draft.places.splice(i,1);saveDraft();renderDraft();};row.append(span,moveButtons(draft.places,i,()=>{saveDraft();renderDraft();}),button);$('group-choices').append(row);
   });
 }
 function addDraft(place) {
@@ -309,7 +338,7 @@ $('group-search-button').onclick=async()=>{
 };
 $('group-form').onsubmit=event=>{event.preventDefault();try {
   $('group-url').value=createGroupUrl(location.href,$('group-name').value,draft.places);
-  $('group-output').hidden=false;$('group-error').textContent='';
+  rememberGroup($('group-url').value);$('group-output').hidden=false;$('group-error').textContent='';
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
 $('group-copy').onclick=async()=>{try{await copyText($('group-url').value);toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
@@ -317,11 +346,22 @@ if (groupSnapshot) {
   $('presets-title').textContent=groupSnapshot.name;
   document.title=groupSnapshot.name+' · 바로길';
   $('presets-manage').hidden=true;
+  $('group-order-open').hidden=false;
   document.querySelectorAll('.preset-card').forEach((el,i)=>{el.hidden=i>=groupSnapshot.places.length;});
   presets=mountPresets({document,window,getSelected:()=>state.selected,readOnly:true,
     store:{read:async slot=>groupSnapshot.places[slot-1] ? {place:groupSnapshot.places[slot-1],version:'snapshot'} : null},
     onSelect:place=>{selectPlace(place,false,true);revealDestination('route-panel');}});
 }
+let orderedPlaces=[];
+function renderOrder() {
+  $('group-order-list').replaceChildren();
+  orderedPlaces.forEach((p,i)=>{const row=document.createElement('div'),name=document.createElement('span');row.className='group-draft-row';name.textContent=`${i+1}. ${p.name}`;row.append(name,moveButtons(orderedPlaces,i,renderOrder));$('group-order-list').append(row);});
+  $('group-order-url').value=createGroupUrl(location.href,groupSnapshot.name,orderedPlaces);
+}
+$('group-order-open').onclick=()=>{orderedPlaces=groupSnapshot.places.map(p=>({...p}));renderOrder();$('group-order-dialog').showModal();};
+$('group-order-close').onclick=()=>$('group-order-dialog').close();
+$('group-order-copy').onclick=async()=>{rememberGroup($('group-order-url').value);try{await copyText($('group-order-url').value);toast('변경한 순서의 새 링크를 복사했습니다.');}catch{$('group-order-url').focus();$('group-order-url').select();}};
+$('group-order-apply').onclick=()=>{rememberGroup($('group-order-url').value);$('group-order-dialog').close();location.href=$('group-order-url').value;};
 async function initialize() {
   try {
     const response = await fetch('./config.json', {cache:'no-store'});
