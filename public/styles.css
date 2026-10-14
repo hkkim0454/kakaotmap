@@ -62,3 +62,6 @@ dialog{width:min(480px,calc(100% - 28px));max-height:88dvh;padding:27px;border:1
 .drag-handle{cursor:grab;touch-action:none;flex:none;min-width:44px;min-height:44px;font-size:26px;color:var(--accent-2);background:var(--tint);border:0;border-radius:10px}.dragging{opacity:.5}.drop-target{outline:2px solid var(--accent);border-radius:10px;background:var(--tint)}.library-row{display:flex;gap:6px;align-items:center}.library-row>.secondary{flex:1;min-width:0}.library-row>.text-button{flex:none}
 
 .library-delete{color:#c43d3d}.library-row{flex-wrap:wrap}.library-row>.secondary{flex-basis:60%}
+
+/* Service proposal links */
+.proposal-links{display:flex;flex-wrap:wrap;gap:4px 12px}.proposal-links a{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);font-weight:600;text-decoration:none}.proposal-links a:hover{text-decoration:underline}.proposal-links a:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}@media(max-width:600px){footer{flex-wrap:wrap}.proposal-links{width:100%;justify-content:flex-end}}
