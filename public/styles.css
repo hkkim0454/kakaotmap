@@ -65,3 +65,16 @@ dialog{width:min(480px,calc(100% - 28px));max-height:88dvh;padding:27px;border:1
 
 /* Service proposal links */
 .proposal-links{display:flex;flex-wrap:wrap;gap:4px 12px}.proposal-links a{display:inline-flex;align-items:center;min-height:44px;color:var(--accent);font-weight:600;text-decoration:none}.proposal-links a:hover{text-decoration:underline}.proposal-links a:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}@media(max-width:600px){footer{flex-wrap:wrap}.proposal-links{width:100%;justify-content:flex-end}}
+
+/* Keep group sharing reachable while the destination list scrolls. */
+#group-dialog{padding:0;overflow:hidden}
+#group-form{display:flex;flex-direction:column;max-height:88dvh}
+.group-editor-body{min-height:0;overflow-y:auto;padding:24px 24px 12px;overscroll-behavior:contain}
+.group-editor-actions{flex:none;padding:12px 24px max(14px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--solid);max-height:55dvh;overflow-y:auto}
+.group-editor-actions #group-error{margin:0 0 8px}
+.group-editor-actions #group-error:empty{display:none}
+.group-editor-actions #group-close-bottom{display:block;width:100%;margin-top:8px;min-height:40px}
+.group-editor-actions #group-output{margin-top:10px}
+.group-editor-actions #group-output label{margin:8px 0}
+.group-editor-actions #group-copy{width:100%}
+@media(max-width:480px){.group-editor-body{padding:20px 18px 10px}.group-editor-actions{padding-inline:18px}}
