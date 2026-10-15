@@ -282,11 +282,15 @@ async function openGroup(url) {
     rememberGroup(safeUrl);$('group-library-dialog').close();location.href=safeUrl;
   }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
 }
+function editGroup(group) {
+  draft={name:group.name,places:group.places.map(p=>({...p}))};
+  $('group-name').value=draft.name;saveDraft();$('group-library-dialog').close();$('group-create').click();
+  $('group-title').textContent='모임 편집';
+}
 async function loadGroup(url) {
   try {
     const group=readGroupUrl(await expandLink(url.trim()));if(!group)throw new Error();
-    draft={name:group.name,places:group.places.map(p=>({...p}))};
-    $('group-name').value=draft.name;saveDraft();$('group-library-dialog').close();$('group-create').click();
+    editGroup(group);
   }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
 }
 function renderLibrary() {
@@ -356,6 +360,7 @@ function addDraft(place) {
   draft.places.push(validatePreset(place));saveDraft();renderDraft();
 }
 $('group-create').onclick=()=>{
+  $('group-title').textContent='모임 링크 만들기';
   $('group-name').value=draft.name;renderDraft();$('group-output').hidden=true;$('group-error').textContent='';
   $('group-add-selected').hidden=!state.selected;$('group-search-results').replaceChildren();$('group-search-query').value='';
   $('group-dialog').showModal();
@@ -393,6 +398,8 @@ if (groupSnapshot) {
   document.title=groupSnapshot.name+' · 바로길';
   $('presets-manage').hidden=true;
   $('group-order-open').hidden=false;
+  $('group-edit-open').hidden=false;
+  $('group-edit-open').onclick=()=>editGroup(groupSnapshot);
   document.querySelectorAll('.preset-card').forEach((el,i)=>{el.hidden=i>=groupSnapshot.places.length;});
   presets=mountPresets({document,window,getSelected:()=>state.selected,readOnly:true,
     store:{read:async slot=>groupSnapshot.places[slot-1] ? {place:groupSnapshot.places[slot-1],version:'snapshot'} : null},

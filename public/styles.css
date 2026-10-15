@@ -78,3 +78,5 @@ dialog{width:min(480px,calc(100% - 28px));max-height:88dvh;padding:27px;border:1
 .group-editor-actions #group-output label{margin:8px 0}
 .group-editor-actions #group-copy{width:100%}
 @media(max-width:480px){.group-editor-body{padding:20px 18px 10px}.group-editor-actions{padding-inline:18px}}
+
+.map-home .presets-heading{flex-wrap:wrap}.map-home .presets-heading h2{white-space:normal;overflow-wrap:anywhere}
