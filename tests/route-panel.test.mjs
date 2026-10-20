@@ -27,7 +27,10 @@ test('automatic comparison does not call routes after location denial',async()=>
  f.change({autoCompare:true});
  await new Promise(resolve=>setTimeout(resolve,0));
  assert.equal(calls,0);
- assert.equal(f.get('route-tmap-launch').disabled,true);
+ assert.equal(f.get('route-tmap-launch').disabled,false);
+ assert.equal(f.get('route-kakao-launch').disabled,false);
+ assert.equal(f.get('route-results').hidden,false);
+ assert.match(f.get('route-status').textContent,/출발지/);
 });
 test('a destination selected before configuration starts automatic lookup once ready',async()=>{
  let calls=0;const f=fixture(async()=>{calls++;return good();});
@@ -62,13 +65,13 @@ test('comparison requires explicit click and preserves successful result with pa
  await f.get('route-compare').onclick();
  assert.equal(calls,1); assert.match(f.get('route-tmap-time').textContent,/27분/);
  assert.match(f.get('route-tmap-detail').textContent,/0원/);
- assert.match(f.get('route-kakao-time').textContent,/조회 불가/);
+ assert.match(f.get('route-kakao-time').textContent,/앱에서 확인/);
  assert.equal(f.get('route-results').hidden,false);
 });
-test('time cards stay disabled when comparison is unconfigured',()=>{
+test('navigation remains available when comparison is unconfigured',()=>{
  const f=fixture(good);f.panel.configure('');
  assert.equal(f.get('route-panel').hidden,false);
- assert.equal(f.get('route-tmap-launch').disabled,true);
+ assert.equal(f.get('route-tmap-launch').disabled,false);
  assert.equal(f.get('route-compare').disabled,true);
 });
 test('destination changes discard a late response and re-enable comparison',async()=>{
@@ -76,7 +79,7 @@ test('destination changes discard a late response and re-enable comparison',asyn
  const f=fixture(()=>new Promise(resolve=>release=resolve));
  await f.get('route-location').onclick();
  const pending=f.get('route-compare').onclick(); f.change(); release(good()); await pending;
- assert.equal(f.get('route-results').hidden,true);
+ assert.equal(f.get('route-results').hidden,false);
  assert.equal(f.get('route-compare').disabled,false);
 });
 test('searched origin supports users who do not grant location permission',async()=>{
@@ -90,7 +93,7 @@ test('searched origin supports users who do not grant location permission',async
 test('quota failure clears results and reports limit without automatic retry',async()=>{
  let calls=0;const f=fixture(async()=>{calls++;return Response.json({error:'limit'},{status:429});});
  await f.get('route-location').onclick();await f.get('route-compare').onclick();
- assert.equal(calls,1);assert.equal(f.get('route-tmap-launch').disabled,true);assert.match(f.get('route-status').textContent,/한도/);
+ assert.equal(calls,1);assert.equal(f.get('route-tmap-launch').disabled,false);assert.match(f.get('route-status').textContent,/한도/);
 });
 test('requesting fresh location clears old origin and stays disabled after permission denial',async()=>{
  let deny;const f=fixture(good,{getCurrentPosition(ok,fail){deny=fail;}});

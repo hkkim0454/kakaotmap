@@ -16,7 +16,7 @@ test('serve only public assets; never expose private files', async t => {
   const config = await (await fetch(origin+'/config.json')).json();
   assert.equal(config.kakaoJavascriptKey,'public-test-key');
   assert.equal(config.firebase.projectId,'svt-led-calculator');
-  for (const asset of ['/presets-store.js','/presets-ui.js','/firestore-presets.rules.txt']) assert.equal((await fetch(origin+asset)).status,200);
+  for (const asset of ['/presets-store.js','/presets-ui.js','/preset-chooser.js','/weather.js','/firestore-presets.rules.txt']) assert.equal((await fetch(origin+asset)).status,200);
   assert.equal((await fetch(origin,{method:'POST'})).status,405);
   assert.equal(await (await fetch(origin,{method:'HEAD'})).text(),'');
 });

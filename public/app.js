@@ -1,12 +1,14 @@
 import { shortenLink, expandLink } from './short-links.js?v=20261014.8';
-import { platform, tmapUrl, kakaoDestination, normalizeResults } from './navigation.js';
+import { platform, tmapUrl, naverUrl, naverPlaceUrl, kakaoDestination, normalizeResults } from './navigation.js?v=20261020.1';
 import { createGroupUrl, readGroupUrl } from './group-share.js?v=20261014.1';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { validatePreset } from './presets-store.js';
 import { mountPresets } from './presets-ui.js?v=20261014.1';
-import { mountRoutePanel } from './route-panel.js?v=20261014.1';
+import { mountRoutePanel } from './route-panel.js?v=20261020.1';
 import { createMapView } from './map-view.js?v=20261014.1';
+import { mountPresetChooser } from './preset-chooser.js';
+import { mountWeather } from './weather.js';
 
 const $ = id => document.getElementById(id);
 const os = platform(navigator.userAgent, navigator.maxTouchPoints);
@@ -33,6 +35,7 @@ const routePanel = mountRoutePanel({ document, navigator, getDestination: () => 
     return normalizeResults(results.flatMap(result => result.rows));
   }
 });
+const weather = mountWeather({ document });
 function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').hidden = true, 4000); }
 function notice(message) { $('notice').textContent = message; }
 function loadScript(src) {
@@ -113,6 +116,7 @@ function selectPlace(place, example = false, currentLocation = false) {
   $('place-name').textContent = place.name;
   $('query').value = place.name;
   $('place-address').textContent = place.address;
+  weather.show(place);
   $('destination-label').textContent = '도착지';
   document.querySelectorAll('.result').forEach(button => button.classList.toggle('selected', button.dataset.place === `${place.name}|${place.x}|${place.y}`));
   drawMap();
@@ -211,6 +215,7 @@ async function search(query, page = 1) {
   notice('장소를 찾고 있습니다…');
   if (page === 1) {
     state.selected = null; state.rows = []; state.pagination = null;
+    weather.clear();
     routePanel.destinationChanged();
     drawMap();
     presets?.selectionChanged();
@@ -244,21 +249,39 @@ $('search-form').onsubmit = event => {
 };
 $('more-results').onclick = () => search(lastQuery, (state.pagination?.current || 1) + 1);
 
-function prepareLaunch() {
-  if (!state.selected) return false;
-  if (os === 'desktop') { toast('스마트폰에서 이 페이지를 열고 소요시간을 눌러 주세요.'); return false; }
+function prepareLaunch(place) {
+  if (!place) return false;
+  if (os === 'desktop') { toast('스마트폰에서 이 페이지를 열고 내비 버튼을 눌러 주세요.'); return false; }
   return true;
 }
 // Keep app launches synchronous inside the user gesture; do not await network work here.
-$('route-tmap-launch').onclick = () => {
-  try { if (prepareLaunch()) window.location.href = tmapUrl(state.selected,os); }
-  catch { toast('앱을 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
-};
-$('route-kakao-launch').onclick = () => {
+function launchNavigation(app, place) {
+  if (app === 'tmap') {
+    try { if (prepareLaunch(place)) window.location.href = tmapUrl(place, os); }
+    catch { toast('TMAP을 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
+    return;
+  }
+  if (app === 'naver') {
+    try { if (prepareLaunch(place)) window.location.href = naverUrl(place, os, location.origin + location.pathname); }
+    catch { toast('네이버 지도를 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
+    return;
+  }
   if (!state.naviReady) { toast('카카오내비 연결을 준비 중입니다. 잠시 후 다시 눌러 주세요.'); return; }
-  try { if (prepareLaunch()) Kakao.Navi.start(kakaoDestination(state.selected)); }
+  try { if (prepareLaunch(place)) Kakao.Navi.start(kakaoDestination(place)); }
   catch { toast('카카오내비를 열지 못했습니다. 잠시 후 다시 눌러 주세요.'); }
+}
+$('route-tmap-launch').onclick = () => launchNavigation('tmap', state.selected);
+$('route-kakao-launch').onclick = () => launchNavigation('kakao', state.selected);
+$('route-naver-launch').onclick = () => launchNavigation('naver', state.selected);
+$('naver-place-button').onclick = () => {
+  try {
+    if (prepareLaunch(state.selected)) window.location.href = naverPlaceUrl(state.selected, os, location.origin + location.pathname);
+  } catch { toast('네이버 지도에서 위치를 열지 못했습니다. 목적지를 다시 선택해 주세요.'); }
 };
+const presetChooser = mountPresetChooser({ document,
+  onNavigate:(app, place) => { selectPlace(place); launchNavigation(app, place); },
+  onDetails:place => { selectPlace(place); revealDestination('route-panel'); }
+});
 
 const libraryKey='barogil-group-library-v1';
 const deletedGroupsKey='barogil-deleted-groups-v1';
@@ -403,7 +426,7 @@ if (groupSnapshot) {
   document.querySelectorAll('.preset-card').forEach((el,i)=>{el.hidden=i>=groupSnapshot.places.length;});
   presets=mountPresets({document,window,getSelected:()=>state.selected,readOnly:true,
     store:{read:async slot=>groupSnapshot.places[slot-1] ? {place:groupSnapshot.places[slot-1],version:'snapshot'} : null},
-    onSelect:place=>{selectPlace(place,false,true);revealDestination('route-panel');}});
+    onSelect:place=>presetChooser.open(place)});
 }
 let orderedPlaces=[];
 function renderOrder() {

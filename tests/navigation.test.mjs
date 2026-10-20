@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { tmapUrl, kakaoDestination, normalizeResults, platform } from '../public/navigation.js';
+import { tmapUrl, naverUrl, naverPlaceUrl, kakaoDestination, normalizeResults, platform } from '../public/navigation.js';
 
 const place = { name: '서울역 & 1번 #출구', x: 126.972, y: 37.556, address: '서울' };
 test('iOS destination roundtrips Korean and reserved characters with longitude first', () => {
@@ -18,6 +18,45 @@ test('Android intent opens TMAP package and encodes destination', () => {
   const query = new URL('https://test/?' + url.split('?')[1].split('#')[0]);
   assert.equal(query.searchParams.get('goalname'), place.name);
   assert.equal(query.searchParams.get('goalx'), '126.972');
+});
+test('Naver navigation passes the destination and web page identity on iOS and Android', () => {
+  const appname = 'https://example.com/kakaotmap/';
+  const ios = new URL(naverUrl(place, 'ios', appname));
+  assert.equal(ios.protocol, 'nmap:');
+  assert.equal(ios.hostname, 'navigation');
+  assert.equal(ios.searchParams.get('dlat'), String(place.y));
+  assert.equal(ios.searchParams.get('dlng'), String(place.x));
+  assert.equal(ios.searchParams.get('dname'), place.name);
+  assert.equal(ios.searchParams.get('appname'), appname);
+  const android = naverUrl(place, 'android', appname);
+  assert.match(android, /^intent:\/\/navigation\?/);
+  assert.match(android, /scheme=nmap/);
+  assert.match(android, /package=com\.nhn\.android\.nmap/);
+  const query = new URL('https://test/?' + android.split('?')[1].split('#')[0]);
+  assert.equal(query.searchParams.get('dlat'), String(place.y));
+  assert.equal(query.searchParams.get('dlng'), String(place.x));
+  assert.equal(query.searchParams.get('appname'), appname);
+});
+test('Naver rejects destinations outside its supported coordinates', () => {
+  assert.throws(() => naverUrl({...place, x:150}, 'ios', 'https://example.com/'));
+  assert.throws(() => naverUrl({...place, y:20}, 'ios', 'https://example.com/'));
+});
+test('Naver place link opens the exact destination marker, separate from navigation', () => {
+  const appname = 'https://example.com/kakaotmap/';
+  const ios = new URL(naverPlaceUrl(place, 'ios', appname));
+  assert.equal(ios.protocol, 'nmap:');
+  assert.equal(ios.hostname, 'place');
+  assert.equal(ios.searchParams.get('lat'), String(place.y));
+  assert.equal(ios.searchParams.get('lng'), String(place.x));
+  assert.equal(ios.searchParams.get('name'), place.name);
+  assert.equal(ios.searchParams.get('appname'), appname);
+  const android = naverPlaceUrl(place, 'android', appname);
+  assert.match(android, /^intent:\/\/place\?/);
+  assert.match(android, /package=com\.nhn\.android\.nmap/);
+  const query = new URL('https://test/?' + android.split('?')[1].split('#')[0]);
+  assert.equal(query.searchParams.get('lat'), String(place.y));
+  assert.equal(query.searchParams.get('lng'), String(place.x));
+  assert.equal(query.searchParams.get('name'), place.name);
 });
 test('Kakao uses numeric WGS84 coordinates', () => {
   assert.deepEqual(kakaoDestination(place), { name: place.name, x: place.x, y: place.y, coordType: 'wgs84' });

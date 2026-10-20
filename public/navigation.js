@@ -22,6 +22,33 @@ export function tmapUrl(place, os) {
   return `tmap://route?rGoName=${encoded}&rGoX=${x}&rGoY=${y}`;
 }
 
+function naverDestination(place) {
+  const { name, x, y } = kakaoDestination(place);
+  if (x < 122.37 || x > 132 || y < 31.43 || y > 44.35) {
+    throw new Error('네이버 지도에서 지원하는 목적지 좌표가 아닙니다.');
+  }
+  return { name, x, y };
+}
+
+function naverAppUrl(action, query, os) {
+  if (os === 'android') {
+    return `intent://${action}?${query}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=com.nhn.android.nmap;end`;
+  }
+  return `nmap://${action}?${query}`;
+}
+
+export function naverUrl(place, os, appname) {
+  const { name, x, y } = naverDestination(place);
+  const query = `dlat=${y}&dlng=${x}&dname=${encodeURIComponent(name)}&appname=${encodeURIComponent(appname)}`;
+  return naverAppUrl('navigation', query, os);
+}
+
+export function naverPlaceUrl(place, os, appname) {
+  const { name, x, y } = naverDestination(place);
+  const query = `lat=${y}&lng=${x}&name=${encodeURIComponent(name)}&appname=${encodeURIComponent(appname)}`;
+  return naverAppUrl('place', query, os);
+}
+
 export function normalizeResults(rows) {
   const seen = new Set();
   return rows.flatMap(row => {

@@ -18,6 +18,8 @@ assets.set('/settings-lock.js','settings-lock.js');
 assets.set('/settings-lock.json','settings-lock.json');
 assets.set('/presets-store.js','presets-store.js');
 assets.set('/presets-ui.js','presets-ui.js');
+assets.set('/preset-chooser.js','preset-chooser.js');
+assets.set('/weather.js','weather.js');
 assets.set('/firestore-presets.rules.txt','firestore-presets.rules.txt');
 types.txt = 'text/plain; charset=utf-8';
 types.json = 'application/json; charset=utf-8';

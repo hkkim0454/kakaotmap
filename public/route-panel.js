@@ -6,12 +6,12 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     generation++; controller?.abort();
     const destination = getDestination();
     for (const provider of ['tmap','kakao']) {
-      $('route-' + provider + '-launch').disabled = true;
-      $('route-' + provider + '-time').textContent = '시간 확인 전';
-      $('route-' + provider + '-detail').textContent = '';
+      $('route-' + provider + '-launch').disabled = !destination;
+      $('route-' + provider + '-time').textContent = '앱에서 확인';
+      $('route-' + provider + '-detail').textContent = destination ? '눌러서 내비 실행' : '';
     }
-    $('route-results').hidden = true;
-    $('route-status').textContent = '';
+    $('route-results').hidden = !destination;
+    $('route-status').textContent = destination && !origin ? '예상 시간을 보려면 내 위치를 허용하거나 출발지를 검색해 선택해 주세요.' : '';
     $('route-compare').textContent = '새로고침 ↻';
     $('route-compare').disabled = !endpoint || !origin || !getDestination();
   }
@@ -83,15 +83,14 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
       if (!Array.isArray(data.routes)) throw new Error('Invalid response');
       let successes = 0;
       for (const provider of ['tmap', 'kakao']) {
-        const route = data.routes.find(item => item.provider === provider);
+      const route = data.routes.find(item => item.provider === provider);
         if (route?.status === 'ok' && number(route.durationSeconds) && number(route.distanceMeters)) {
           successes++;
-          $('route-' + provider + '-launch').disabled = false;
           const minutes = Math.max(1, Math.ceil(route.durationSeconds / 60));
           $('route-' + provider + '-time').textContent = minutes >= 60 ? `${Math.floor(minutes / 60)}시간 ${minutes % 60}분` : `${minutes}분`;
           $('route-' + provider + '-detail').textContent = `${(route.distanceMeters / 1000).toFixed(1)}km · 통행료 ${number(route.tollWon) ? route.tollWon.toLocaleString('ko-KR') + '원' : '정보 없음'}`;
         } else {
-          $('route-' + provider + '-time').textContent = '조회 불가';
+          $('route-' + provider + '-time').textContent = '앱에서 확인';
           $('route-' + provider + '-detail').textContent = '내비 앱에서 경로를 확인해주세요.';
         }
       }
@@ -105,7 +104,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
       clearTimeout(timer);
       if (request === generation) {
         for (const provider of ['tmap','kakao']) {
-          if ($('route-' + provider + '-launch').disabled) $('route-' + provider + '-time').textContent = '조회 불가';
+          if ($('route-' + provider + '-time').textContent === '조회 중…') $('route-' + provider + '-time').textContent = '앱에서 확인';
         }
         $('route-compare').disabled = false; $('route-compare').textContent = '새로고침 ↻'; }
     }
