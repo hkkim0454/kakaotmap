@@ -29,6 +29,11 @@ test('shows only remaining hours today at the selected destination', async () =>
   assert.equal(requested.searchParams.get('timezone'),'Asia/Seoul');
   assert.equal(requested.searchParams.get('forecast_days'),'1');
   assert.equal(f.$('weather-hours').children.length,2);
+  assert.equal(f.$('weather-tile-label').textContent,'지금 날씨');
+  assert.equal(f.$('hero-weather-label').textContent,'현재 날씨');
+  assert.match(f.$('hero-weather-metric').textContent,/12°/);
+  assert.match(f.$('weather-guidance').textContent,/현재/);
+  assert.match(f.$('weather-hero-icon').innerHTML,/<svg/);
   assert.match(f.$('weather-hours').children[0].textContent,/10시.*12°C.*20%/);
   assert.match(f.$('weather-hours').children[1].textContent,/11시.*14°C.*50%/);
 });
@@ -44,4 +49,17 @@ test('late response for a previous destination cannot replace the current foreca
   finishFirst(response);
   await first;
   assert.equal(f.$('weather-hours').children,current);
+});
+
+test('arrival forecast follows the nearest hour and marks rain', async () => {
+  const f = fixture(async () => response);
+  await f.weather.show({name:'서울역',x:126.972,y:37.556});
+  f.weather.setArrival({queriedAt:'2026-10-20T01:10:00Z',durationSeconds:3000});
+  assert.match(f.$('weather-arrival').textContent,/11시.*비.*50%/);
+  assert.equal(f.$('weather-arrival-temp').textContent,'14°');
+  assert.equal(f.$('weather-tile-label').textContent,'도착 시 날씨');
+  assert.equal(f.$('hero-weather-label').textContent,'도착 시 날씨');
+  assert.match(f.$('hero-weather-metric').textContent,/14°/);
+  assert.match(f.$('weather-guidance').textContent,/우산/);
+  assert.equal(f.$('weather-hours').children[1].className.includes('arrival'),true);
 });

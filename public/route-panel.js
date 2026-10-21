@@ -1,9 +1,10 @@
 const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
-export function mountRoutePanel({ document, navigator, getDestination, searchPlaces, onOriginChanged = () => {}, fetcher = fetch }) {
+export function mountRoutePanel({ document, navigator, getDestination, searchPlaces, onOriginChanged = () => {}, onRoutesUpdated = () => {}, fetcher = fetch }) {
   const $ = id => document.getElementById(id);
   let endpoint = '', origin = null, generation = 0, originRequest = 0, controller, automatic = false;
   function reset() {
     generation++; controller?.abort();
+    onRoutesUpdated(null);
     const destination = getDestination();
     for (const provider of ['tmap','kakao']) {
       $('route-' + provider + '-launch').disabled = !destination;
@@ -81,9 +82,11 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
       }
       const data = await response.json(); if (request !== generation) return;
       if (!Array.isArray(data.routes)) throw new Error('Invalid response');
+      const preferred = ['tmap','kakao'].map(provider => data.routes.find(item => item.provider === provider && item.status === 'ok' && number(item.durationSeconds) && number(item.distanceMeters))).find(Boolean);
+      onRoutesUpdated(preferred ? {provider:preferred.provider,queriedAt:data.queriedAt,durationSeconds:preferred.durationSeconds,distanceMeters:preferred.distanceMeters} : null);
       let successes = 0;
       for (const provider of ['tmap', 'kakao']) {
-      const route = data.routes.find(item => item.provider === provider);
+        const route = data.routes.find(item => item.provider === provider);
         if (route?.status === 'ok' && number(route.durationSeconds) && number(route.distanceMeters)) {
           successes++;
           const minutes = Math.max(1, Math.ceil(route.durationSeconds / 60));

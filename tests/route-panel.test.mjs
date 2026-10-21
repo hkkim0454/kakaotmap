@@ -1,14 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountRoutePanel } from '../public/route-panel.js';
-function fixture(fetcher, geolocation = { getCurrentPosition(ok) {ok({coords:{longitude:126.97,latitude:37.55}});} }) {
+function fixture(fetcher, geolocation = { getCurrentPosition(ok) {ok({coords:{longitude:126.97,latitude:37.55}});} }, onRoutesUpdated = () => {}) {
   const elements = new Map();
   const element = () => ({ textContent: '', value: '', hidden: false, disabled: false, children: [], replaceChildren(...items) { this.children = items; }, append(...items) { this.children.push(...items); } });
   const get = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   const document = { getElementById: get, createElement: element };
   let destination = {name:'강남역', x:127.0276, y:37.4979};
   const panel = mountRoutePanel({ document, navigator: {geolocation},
-    getDestination:()=>destination, fetcher, searchPlaces:async()=>[{name:'서울역',address:'서울',x:126.97,y:37.55}] });
+    getDestination:()=>destination, fetcher, onRoutesUpdated, searchPlaces:async()=>[{name:'서울역',address:'서울',x:126.97,y:37.55}] });
   panel.configure('https://barogil-route-api.hkkim0454.workers.dev');
   return {get,panel, change(options){ destination={name:'다른 곳',x:127,y:37}; panel.destinationChanged(options); }};
 }
@@ -102,4 +102,14 @@ test('requesting fresh location clears old origin and stays disabled after permi
  f.get('route-location').onclick();assert.equal(f.get('route-compare').disabled,true);
  deny();assert.equal(f.get('route-compare').disabled,true);
  assert.doesNotMatch(f.get('route-origin-label').textContent,/서울역/);
+});
+
+test('arrival estimate prefers TMAP, falls back to Kakao, and clears for a new destination',async()=>{
+ const updates=[];
+ const geo={getCurrentPosition(ok){ok({coords:{longitude:126.97,latitude:37.55}});}};
+ const f=fixture(good,geo,update=>updates.push(update));
+ await f.get('route-location').onclick();
+ await f.get('route-compare').onclick();
+ assert.deepEqual(updates.at(-1),{provider:'tmap',queriedAt:'2026-10-13T11:21:53Z',durationSeconds:1563,distanceMeters:12028});
+ f.change();assert.equal(updates.at(-1),null);
 });
