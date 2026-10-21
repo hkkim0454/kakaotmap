@@ -208,7 +208,7 @@ function renderResults() {
     const address = document.createElement('small'); address.textContent = `${place.category} · ${place.address}`;
     const arrow = document.createElement('span'); arrow.className = 'arrow'; arrow.textContent = '↗'; arrow.setAttribute('aria-hidden','true');
     body.append(name,address); button.append(pin,body,arrow);
-    button.onclick = () => { selectPlace(place); revealDestination('route-panel'); };
+    button.onclick = () => { selectPlace(place); revealDestination(); };
     $('results').append(button);
   }
   $('more-results').hidden = !state.pagination?.hasNextPage;
@@ -296,7 +296,7 @@ $('naver-place-button').onclick = () => {
 };
 const presetChooser = mountPresetChooser({ document,
   onNavigate:(app, place) => { selectPlace(place); launchNavigation(app, place); },
-  onDetails:place => { selectPlace(place); revealDestination('route-panel'); }
+  onDetails:place => { selectPlace(place); revealDestination(); }
 });
 
 const libraryKey='barogil-group-library-v1';

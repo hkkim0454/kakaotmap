@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountWeather } from '../public/weather.js';
 
-function fixture(fetchForecast) {
+function fixture(fetchForecast, currentTime = '2026-10-20T01:30:00Z') {
   const elements = new Map();
   const document = {
     getElementById(id) {
@@ -11,7 +11,7 @@ function fixture(fetchForecast) {
     },
     createElement() { return { textContent:'', className:'' }; }
   };
-  const weather = mountWeather({ document, fetchForecast, now:() => new Date('2026-10-20T01:30:00Z') });
+  const weather = mountWeather({ document, fetchForecast, now:() => new Date(currentTime) });
   return { weather, $:document.getElementById };
 }
 
@@ -27,7 +27,7 @@ test('shows only remaining hours today at the selected destination', async () =>
   assert.equal(requested.searchParams.get('latitude'),'37.556');
   assert.equal(requested.searchParams.get('longitude'),'126.972');
   assert.equal(requested.searchParams.get('timezone'),'Asia/Seoul');
-  assert.equal(requested.searchParams.get('forecast_days'),'1');
+  assert.equal(requested.searchParams.get('forecast_days'),'2');
   assert.equal(f.$('weather-hours').children.length,2);
   assert.equal(f.$('weather-tile-label').textContent,'지금 날씨');
   assert.equal(f.$('hero-weather-label').textContent,'현재 날씨');
@@ -36,6 +36,7 @@ test('shows only remaining hours today at the selected destination', async () =>
   assert.match(f.$('weather-hero-icon').innerHTML,/<svg/);
   assert.match(f.$('weather-hours').children[0].textContent,/10시.*12°C.*20%/);
   assert.match(f.$('weather-hours').children[1].textContent,/11시.*14°C.*50%/);
+  assert.equal(f.$('weather-range').textContent,'14° / 9°');
 });
 
 test('late response for a previous destination cannot replace the current forecast', async () => {
@@ -51,6 +52,13 @@ test('late response for a previous destination cannot replace the current foreca
   assert.equal(f.$('weather-hours').children,current);
 });
 
+test('current weather stays in the current hour near the next hour', async () => {
+  const f = fixture(async () => response,'2026-10-20T01:50:00Z');
+  await f.weather.show({name:'서울역',x:126.972,y:37.556});
+  assert.match(f.$('weather-arrival').textContent,/10시.*대체로 맑음/);
+  assert.equal(f.$('weather-hours').children[0].className.includes('arrival'),true);
+});
+
 test('arrival forecast follows the nearest hour and marks rain', async () => {
   const f = fixture(async () => response);
   await f.weather.show({name:'서울역',x:126.972,y:37.556});
@@ -62,4 +70,15 @@ test('arrival forecast follows the nearest hour and marks rain', async () => {
   assert.match(f.$('hero-weather-metric').textContent,/14°/);
   assert.match(f.$('weather-guidance').textContent,/우산/);
   assert.equal(f.$('weather-hours').children[1].className.includes('arrival'),true);
+});
+
+test('arrival after midnight uses tomorrow forecast without marking today chart', async () => {
+  const f = fixture(async () => response);
+  await f.weather.show({name:'서울역',x:126.972,y:37.556});
+  f.weather.setArrival({queriedAt:'2026-10-20T14:45:00Z',durationSeconds:1800});
+  assert.equal(f.$('weather-tile-label').textContent,'내일 도착 시 날씨');
+  assert.equal(f.$('weather-arrival-temp').textContent,'10°');
+  assert.match(f.$('weather-arrival').textContent,/0시.*흐림/);
+  assert.equal(f.$('weather-hours').children.some(item => item.className.includes('arrival')),false);
+  assert.match(f.$('weather-status').textContent,/내일/);
 });

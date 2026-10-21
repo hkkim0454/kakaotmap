@@ -21,12 +21,11 @@ export function weatherIcon(code,hour) {
   return wrapIcon(cloud('#8D9AAB')+'<g stroke="#2F8BFF" stroke-width="3.5" stroke-linecap="round"><path d="m18 36-2 6m10-6-2 6m10-6-2 6"/></g>');
 }
 
-function forecastRows(hourly,now) {
+function forecastRows(hourly) {
   if(!Array.isArray(hourly?.time)||!Array.isArray(hourly.temperature_2m)||!Array.isArray(hourly.precipitation_probability)||!Array.isArray(hourly.weather_code)) throw new Error('Invalid forecast');
-  const localHour=localStamp(now).slice(0,13),day=localHour.slice(0,10);
   return hourly.time.flatMap((time,index)=>{
     const temperature=hourly.temperature_2m[index];
-    if(typeof time!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:00$/.test(time)||!time.startsWith(day)||time.slice(0,13)<localHour||!Number.isFinite(temperature)) return [];
+    if(typeof time!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:00$/.test(time)||!Number.isFinite(temperature)) return [];
     const chance=hourly.precipitation_probability[index],code=hourly.weather_code[index];
     const [name,kind]=CONDITIONS.get(code)||['날씨 정보 없음','cloud'];
     return [{time,hour:Number(time.slice(11,13)),temp:Math.round(temperature),chance:Number.isFinite(chance)?Math.max(0,Math.min(100,Math.round(chance))):null,code,name,kind}];
@@ -37,7 +36,7 @@ function chartSvg(rows,arrivalIndex,hasRoute) {
   const n=rows.length,x=i=>40+(n===1?340:680*i/(n-1));
   const temps=rows.map(row=>row.temp),lo=Math.min(...temps)-1,hi=Math.max(...temps)+1;
   const y=temp=>105+(hi-temp)*78/Math.max(1,hi-lo);
-  const ax=x(arrivalIndex),tagX=Math.max(8,Math.min(688,ax-36)),tagTextX=tagX+36;
+  const hasMarker=arrivalIndex>=0,ax=hasMarker?x(arrivalIndex):0,tagX=Math.max(8,Math.min(688,ax-36)),tagTextX=tagX+36;
   const bands=rows.map((row,i)=>{
     const width=n===1?58:Math.min(68,680/(n-1));
     const tint=i===arrivalIndex?'rgba(255,59,48,.12)':row.kind==='rain'||row.kind==='storm'?'rgba(0,122,255,.10)':row.kind==='sun'?'rgba(224,138,32,.12)':'rgba(118,118,128,.10)';
@@ -51,12 +50,13 @@ function chartSvg(rows,arrivalIndex,hasRoute) {
   }).join('');
   const points=rows.map((row,i)=>`${x(i).toFixed(1)},${y(row.temp).toFixed(1)}`).join(' ');
   const dots=rows.map((row,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(row.temp).toFixed(1)}" r="${i===arrivalIndex?6:4}" fill="var(--panel-solid)" stroke="var(--ink)" stroke-width="2"/><text x="${x(i).toFixed(1)}" y="${(y(row.temp)-12).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="var(--ink)">${row.temp}°</text>`).join('');
-  return `<svg viewBox="0 0 760 262" role="presentation" aria-hidden="true"><line x1="40" x2="720" y1="150" y2="150" stroke="var(--line)"/><line x1="40" x2="720" y1="236" y2="236" stroke="var(--line-2)"/>${bands}${bars}<line x1="${ax.toFixed(1)}" x2="${ax.toFixed(1)}" y1="8" y2="239" stroke="var(--dest)" stroke-width="2" stroke-dasharray="4 3"/><rect x="${tagX.toFixed(1)}" y="80" width="72" height="20" rx="10" fill="var(--dest)"/><text x="${tagTextX.toFixed(1)}" y="94" text-anchor="middle" font-size="11" font-weight="800" fill="white">${hasRoute?'도착':'지금'} ${rows[arrivalIndex].hour}시</text><polyline points="${points}" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
+  const marker=hasMarker?`<line x1="${ax.toFixed(1)}" x2="${ax.toFixed(1)}" y1="8" y2="239" stroke="var(--dest)" stroke-width="2" stroke-dasharray="4 3"/><rect x="${tagX.toFixed(1)}" y="80" width="72" height="20" rx="10" fill="var(--dest)"/><text x="${tagTextX.toFixed(1)}" y="94" text-anchor="middle" font-size="11" font-weight="800" fill="white">${hasRoute?'도착':'지금'} ${rows[arrivalIndex].hour}시</text>`:'';
+  return `<svg viewBox="0 0 760 262" role="presentation" aria-hidden="true"><line x1="40" x2="720" y1="150" y2="150" stroke="var(--line)"/><line x1="40" x2="720" y1="236" y2="236" stroke="var(--line-2)"/>${bands}${bars}${marker}<polyline points="${points}" fill="none" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}</svg>`;
 }
 
 export function mountWeather({document,fetchForecast=fetch,now=()=>new Date()}) {
   const $=id=>document.getElementById(id);
-  let generation=0,rows=[],estimate=null;
+  let generation=0,rows=[],dailyRows=[],futureRows=[],estimate=null;
   function resetView() {
     $('weather-status').textContent='';$('weather-hours').replaceChildren();$('weather-chart').innerHTML='';
     $('weather-hero-text').textContent='목적지 날씨를 확인하고 있습니다…';
@@ -65,25 +65,29 @@ export function mountWeather({document,fetchForecast=fetch,now=()=>new Date()}) 
     $('weather-guidance').textContent='';$('weather-arrival-icon').innerHTML='';$('weather-hero-icon').innerHTML='';$('weather-tile-label').textContent='지금 날씨';
     $('hero-weather-label').textContent='현재 날씨';$('hero-weather-metric').textContent='확인 중';
   }
-  function clear(){generation++;rows=[];estimate=null;resetView();}
+  function clear(){generation++;rows=[];dailyRows=[];futureRows=[];estimate=null;resetView();}
   function render(){
     if(!rows.length)return;
     const hasRoute=!!estimate&&Number.isFinite(Date.parse(estimate.queriedAt))&&Number.isFinite(estimate.durationSeconds);
     const target=hasRoute?Date.parse(estimate.queriedAt)+estimate.durationSeconds*1000:now().getTime();
-    const arrivalIndex=rows.reduce((best,row,i)=>{const delta=Math.abs(Date.parse(row.time+'+09:00')-target);return delta<best.delta?{index:i,delta}:best;},{index:0,delta:Infinity}).index;
-    const arrival=rows[arrivalIndex],chance=arrival.chance===null?'정보 없음':`${arrival.chance}%`;
-    $('weather-tile-label').textContent=hasRoute?'도착 시 날씨':'지금 날씨';
-    $('hero-weather-label').textContent=hasRoute?'도착 시 날씨':'현재 날씨';
-    $('hero-weather-metric').textContent=`${arrival.temp}° · ${arrival.name}`;
-    $('weather-arrival-temp').textContent=`${arrival.temp}°`;
-    $('weather-arrival').textContent=`${arrival.hour}시 · ${arrival.name} · 강수 ${chance}`;
-    $('weather-hero-text').textContent=`${hasRoute?'도착 시':'현재 시간 기준'} ${arrival.temp}° · ${arrival.name} · 강수 ${chance}`;
-    $('weather-hero-icon').innerHTML=weatherIcon(arrival.code,arrival.hour);
-    $('weather-arrival-icon').innerHTML=weatherIcon(arrival.code,arrival.hour);
-    $('weather-arrival-icon').parentElement?.setAttribute?.('data-kind',arrival.kind);
+    const today=rows[0].time.slice(0,10),arrivalDay=localStamp(new Date(target)).slice(0,10),nextDay=hasRoute&&arrivalDay!==today;
+    const candidates=nextDay?futureRows.filter(row=>row.time.startsWith(arrivalDay)):rows;
+    const arrival=hasRoute?candidates.reduce((best,row)=>Math.abs(Date.parse(row.time+'+09:00')-target)<Math.abs(Date.parse(best.time+'+09:00')-target)?row:best,candidates[0]||null):rows[0];
+    const arrivalIndex=arrival?rows.findIndex(row=>row.time===arrival.time):-1;
+    const chance=arrival?.chance==null?'정보 없음':`${arrival.chance}%`;
+    const label=nextDay?'내일 도착 시 날씨':hasRoute?'도착 시 날씨':'지금 날씨';
+    $('weather-tile-label').textContent=label;
+    $('hero-weather-label').textContent=nextDay?'내일 날씨':hasRoute?'도착 시 날씨':'현재 날씨';
+    $('hero-weather-metric').textContent=arrival?`${arrival.temp}° · ${arrival.name}`:'예보 없음';
+    $('weather-arrival-temp').textContent=arrival?`${arrival.temp}°`:'—';
+    $('weather-arrival').textContent=arrival?`${nextDay?'내일 ':''}${arrival.hour}시 · ${arrival.name} · 강수 ${chance}`:'도착 시각의 예보가 없습니다.';
+    $('weather-hero-text').textContent=arrival?`${nextDay?'내일 도착 시':hasRoute?'도착 시':'현재 시간 기준'} ${arrival.temp}° · ${arrival.name} · 강수 ${chance}`:'도착 시각의 날씨 예보가 없습니다.';
+    $('weather-hero-icon').innerHTML=arrival?weatherIcon(arrival.code,arrival.hour):'';
+    $('weather-arrival-icon').innerHTML=arrival?weatherIcon(arrival.code,arrival.hour):'';
+    $('weather-arrival-icon').parentElement?.setAttribute?.('data-kind',arrival?.kind||'cloud');
     const when=hasRoute?'도착할 때':'현재';
-    $('weather-guidance').textContent=arrival.kind==='rain'||arrival.kind==='storm'||(arrival.chance??0)>=50?`${when} 비가 와요. 우산을 챙기세요.`:arrival.kind==='sun'?`${when} 맑아요.`:arrival.kind==='snow'?`${when} 눈이 올 수 있어요. 이동에 주의하세요.`:`${when} 흐려요. 비 소식은 없어요.`;
-    const temps=rows.map(row=>row.temp),rain=rows.filter(row=>(row.chance??0)>=50),maxRain=rows.reduce((best,row)=>(row.chance??-1)>(best.chance??-1)?row:best,rows[0]);
+    $('weather-guidance').textContent=!arrival?'내비에서 도착 시각과 날씨를 확인해 주세요.':arrival.kind==='rain'||arrival.kind==='storm'||(arrival.chance??0)>=50?`${when} 비가 와요. 우산을 챙기세요.`:arrival.kind==='sun'?`${when} 맑아요.`:arrival.kind==='snow'?`${when} 눈이 올 수 있어요. 이동에 주의하세요.`:`${when} 흐려요. 비 소식은 없어요.`;
+    const temps=dailyRows.map(row=>row.temp),rain=dailyRows.filter(row=>(row.chance??0)>=50),maxRain=dailyRows.reduce((best,row)=>(row.chance??-1)>(best.chance??-1)?row:best,dailyRows[0]);
     $('weather-now').textContent=`${rows[0].temp}° · ${rows[0].name}`;
     $('weather-range').textContent=`${Math.max(...temps)}° / ${Math.min(...temps)}°`;
     $('weather-rain-window').textContent=rain.length?`${rain[0].hour}–${rain.at(-1).hour}시`:'뚜렷한 비 예보 없음';
@@ -93,19 +97,23 @@ export function mountWeather({document,fetchForecast=fetch,now=()=>new Date()}) 
       item.textContent=`${row.hour}시 · ${row.name} · ${row.temp}°C · 강수 ${row.chance??'정보 없음'}%`;
       item.innerHTML=`<span class="weather-card-time">${i===arrivalIndex?(hasRoute?'도착':'지금'):`${row.hour}시`}</span><span class="weather-card-icon" aria-hidden="true">${weatherIcon(row.code,row.hour)}</span><span class="weather-card-temp">${row.temp}°</span><span class="weather-card-rain" style="--chance:${row.chance??0}%">강수 ${row.chance??'—'}%</span>`;return item;});
     $('weather-hours').replaceChildren(...cards);
-    $('weather-status').textContent=hasRoute?'도착 시각에 가까운 시간의 예보입니다.':'경로 시간 확인 전 · 현재 시간 기준 예보입니다.';
+    $('weather-status').textContent=nextDay?'도착은 내일입니다. 시간별 그래프는 오늘 남은 시간만 보여줍니다.':hasRoute?'도착 시각에 가까운 시간의 예보입니다.':'경로 시간 확인 전 · 현재 시간 기준 예보입니다.';
   }
   function setArrival(next){estimate=next&&Number.isFinite(next.durationSeconds)&&next.durationSeconds>=0?next:null;render();}
   async function show(place){
-    const request=++generation;rows=[];estimate=null;resetView();$('weather-status').textContent='오늘의 시간별 날씨를 불러오는 중…';
+    const request=++generation;rows=[];dailyRows=[];futureRows=[];estimate=null;resetView();$('weather-status').textContent='오늘의 시간별 날씨를 불러오는 중…';
     try{
       const {x,y}=kakaoDestination(place),url=new URL('https://api.open-meteo.com/v1/forecast');
       url.searchParams.set('latitude',String(y));url.searchParams.set('longitude',String(x));
       url.searchParams.set('hourly','temperature_2m,precipitation_probability,weather_code');
-      url.searchParams.set('timezone','Asia/Seoul');url.searchParams.set('forecast_days','1');
+      url.searchParams.set('timezone','Asia/Seoul');url.searchParams.set('forecast_days','2');
       const response=await fetchForecast(url.toString());if(!response.ok)throw new Error('Forecast unavailable');
       const {hourly}=await response.json();if(request!==generation)return;
-      rows=forecastRows(hourly,now());if(!rows.length){$('weather-status').textContent='오늘 남은 시간의 예보가 없습니다.';$('weather-hero-text').textContent='오늘 남은 예보가 없습니다.';$('hero-weather-metric').textContent='정보 없음';return;}render();
+      const forecast=forecastRows(hourly),currentHour=localStamp(now()).slice(0,13),today=currentHour.slice(0,10);
+      dailyRows=forecast.filter(row=>row.time.startsWith(today));
+      futureRows=forecast.filter(row=>row.time.slice(0,13)>=currentHour);
+      rows=futureRows.filter(row=>row.time.startsWith(today));
+      if(!rows.length){$('weather-status').textContent='오늘 남은 시간의 예보가 없습니다.';$('weather-hero-text').textContent='오늘 남은 예보가 없습니다.';$('hero-weather-metric').textContent='정보 없음';return;}render();
     }catch{if(request===generation){$('weather-status').textContent='날씨를 불러오지 못했습니다. 목적지를 다시 선택해 주세요.';$('weather-hero-text').textContent='날씨 정보를 불러오지 못했습니다.';$('hero-weather-metric').textContent='정보 없음';}}
   }
   return {show,clear,setArrival};
