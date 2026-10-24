@@ -1,6 +1,6 @@
 import { shortenLink, expandLink } from './short-links.js?v=20261014.8';
 import { platform, tmapUrl, naverUrl, naverPlaceUrl, kakaoDestination, normalizeResults } from './navigation.js?v=20261020.1';
-import { createGroupUrl, readGroupUrl } from './group-share.js?v=20261014.1';
+import { createGroupUrl, readGroupUrl, shareGroup } from './group-share.js?v=20261024.5';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { validatePreset } from './presets-store.js';
@@ -442,11 +442,27 @@ $('group-form').onsubmit=async event=>{event.preventDefault();try {
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
 $('group-copy').onclick=async()=>{try{await copyText(await compactLink($('group-url').value));toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
-  rememberGroup(createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places),false);
+  const groupUrl=createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places);
+  rememberGroup(groupUrl,false);
   $('shared-presets').hidden=false;
   $('presets-title').textContent=groupSnapshot.name;
   document.title=groupSnapshot.name+' · 바로길';
   $('presets-manage').hidden=true;
+  $('group-share-actions').hidden=false;
+  const showGroupShareFallback=url=>{
+    $('group-share-fallback').hidden=false;
+    $('group-share-url').value=url;
+    $('group-share-url').focus();
+    $('group-share-url').select();
+  };
+  $('group-share-button').onclick=async()=>{
+    const result=await shareGroup({url:groupUrl,name:groupSnapshot.name,placeCount:groupSnapshot.places.length,navigator,copy:copyText,fallback:showGroupShareFallback});
+    if(result==='copied')toast('모임 링크를 복사했습니다. 원하는 사람에게 보내세요.');
+  };
+  $('group-copy-link').onclick=async()=>{
+    try{await copyText(groupUrl);toast('모임 링크를 복사했습니다.');}
+    catch{showGroupShareFallback(groupUrl);}
+  };
   $('group-order-open').hidden=false;
   $('group-edit-open').hidden=false;
   $('group-edit-open').onclick=()=>editGroup(groupSnapshot);

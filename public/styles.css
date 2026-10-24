@@ -171,3 +171,9 @@ button{white-space:nowrap}
 .map-destination-metrics div{min-width:0}
 .map-destination-metrics span{display:block;font-size:10px;color:var(--muted)}
 .map-destination-metrics strong{display:block;margin-top:3px;font-size:13px;overflow-wrap:anywhere}
+.map-home .group-share-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.group-share-actions .primary{flex:1;min-height:42px}
+.group-share-actions .secondary{min-height:42px}
+.group-share-fallback{margin:8px 0 12px;font-size:12px;color:var(--muted)}
+.group-share-fallback label{display:block;margin-bottom:5px}
+.group-share-fallback input{width:100%}

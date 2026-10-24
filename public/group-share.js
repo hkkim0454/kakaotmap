@@ -21,3 +21,22 @@ export function readGroupUrl(href) {
     return validate(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)));
   } catch { throw new Error('모임 링크가 올바르지 않습니다.'); }
 }
+export async function shareGroup({url,name,placeCount,navigator,copy,fallback}) {
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({title:name,text:`${name} 장소 ${placeCount}곳`,url});
+      return 'shared';
+    } catch (error) {
+      if (error?.name === 'AbortError') return 'cancelled';
+      fallback(url);
+      return 'fallback';
+    }
+  }
+  try {
+    await copy(url);
+    return 'copied';
+  } catch {
+    fallback(url);
+    return 'fallback';
+  }
+}
