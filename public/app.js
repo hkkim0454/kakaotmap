@@ -32,6 +32,9 @@ const routePanel = mountRoutePanel({ document, navigator, getDestination: () => 
     $('hero-arrival-time').textContent = arrival && !Number.isNaN(arrival.getTime())
       ? new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).format(arrival)
       : '미정';
+    $('map-arrival-time').textContent = $('hero-arrival-time').textContent;
+    $('map-route-duration').textContent = $('hero-route-duration').textContent;
+    $('map-route-distance').textContent = $('hero-route-distance').textContent;
   },
   onOriginChanged: place => { state.origin = place; drawMap(); },
   searchPlaces: async query => {
@@ -294,6 +297,8 @@ $('hero-route-options').onclick = () => {
   $('route-title').focus({preventScroll:true});
   $('route-panel').scrollIntoView({behavior:'smooth',block:'start'});
 };
+$('map-copy-address').onclick = () => $('copy-address').click();
+$('map-naver-place').onclick = () => $('naver-place-button').click();
 $('hero-share').onclick = () => $('share-button').click();
 $('naver-place-button').onclick = () => {
   try {
