@@ -5,7 +5,7 @@ import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { validatePreset } from './presets-store.js';
 import { mountPresets } from './presets-ui.js?v=20261014.1';
-import { mountRoutePanel } from './route-panel.js?v=20261021.1';
+import { mountRoutePanel } from './route-panel.js?v=20261024.1';
 import { createMapView } from './map-view.js?v=20261021.1';
 import { mountPresetChooser } from './preset-chooser.js';
 import { mountWeather } from './weather.js?v=20261021.1';
@@ -25,11 +25,8 @@ const weather = mountWeather({ document });
 const routePanel = mountRoutePanel({ document, navigator, getDestination: () => state.selected,
   onRoutesUpdated: result => {
     weather.setArrival(result);
-    $('hero-route-provider').textContent = result?.provider === 'kakao' ? '소요 · 카카오' : '소요 · TMAP';
+    $('hero-route-provider').textContent = result?.provider === 'kakao' ? '예상 소요 · 카카오' : result?.provider === 'tmap' ? '예상 소요 · TMAP' : '예상 소요';
     $('hero-route-duration').textContent = result ? `${Math.max(1,Math.ceil(result.durationSeconds/60))}분` : '앱에서 확인';
-    $('hero-tmap-launch').textContent = result?.provider === 'tmap'
-      ? `TMAP으로 바로 출발 · ${Math.max(1,Math.ceil(result.durationSeconds/60))}분`
-      : 'TMAP으로 바로 출발 · 앱에서 확인';
     $('hero-route-distance').textContent = result ? `${(result.distanceMeters/1000).toFixed(1)}km` : '—';
     const arrival = result ? new Date(Date.parse(result.queriedAt)+result.durationSeconds*1000) : null;
     $('hero-arrival-time').textContent = arrival && !Number.isNaN(arrival.getTime())
@@ -286,8 +283,7 @@ function launchNavigation(app, place) {
 $('route-tmap-launch').onclick = () => launchNavigation('tmap', state.selected);
 $('route-kakao-launch').onclick = () => launchNavigation('kakao', state.selected);
 $('route-naver-launch').onclick = () => launchNavigation('naver', state.selected);
-$('hero-tmap-launch').onclick = () => launchNavigation('tmap', state.selected);
-$('hero-other-navi').onclick = () => $('route-panel').scrollIntoView({behavior:'smooth',block:'start'});
+$('hero-route-options').onclick = () => $('map-stage').scrollIntoView({behavior:'smooth',block:'start'});
 $('hero-share').onclick = () => $('share-button').click();
 $('naver-place-button').onclick = () => {
   try {

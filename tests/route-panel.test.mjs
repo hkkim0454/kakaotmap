@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountRoutePanel } from '../public/route-panel.js';
-function fixture(fetcher, geolocation = { getCurrentPosition(ok) {ok({coords:{longitude:126.97,latitude:37.55}});} }, onRoutesUpdated = () => {}) {
+function fixture(fetcher, geolocation = { getCurrentPosition(ok) {ok({coords:{longitude:126.97,latitude:37.55}});} }, onRoutesUpdated = () => {}, initialDestination = {name:'강남역', x:127.0276, y:37.4979}) {
   const elements = new Map();
   const element = () => ({ textContent: '', value: '', hidden: false, disabled: false, children: [], replaceChildren(...items) { this.children = items; }, append(...items) { this.children.push(...items); } });
   const get = id => { if (!elements.has(id)) elements.set(id, element()); return elements.get(id); };
   const document = { getElementById: get, createElement: element };
-  let destination = {name:'강남역', x:127.0276, y:37.4979};
+  let destination = initialDestination;
   const panel = mountRoutePanel({ document, navigator: {geolocation},
     getDestination:()=>destination, fetcher, onRoutesUpdated, searchPlaces:async()=>[{name:'서울역',address:'서울',x:126.97,y:37.55}] });
   panel.configure('https://barogil-route-api.hkkim0454.workers.dev');
@@ -102,6 +102,12 @@ test('requesting fresh location clears old origin and stays disabled after permi
  f.get('route-location').onclick();assert.equal(f.get('route-compare').disabled,true);
  deny();assert.equal(f.get('route-compare').disabled,true);
  assert.doesNotMatch(f.get('route-origin-label').textContent,/서울역/);
+});
+test('route choices appear only after choosing a destination',()=>{
+ const f=fixture(good,undefined,undefined,null);
+ assert.equal(f.get('route-panel').hidden,true);
+ f.change();
+ assert.equal(f.get('route-panel').hidden,false);
 });
 
 test('arrival estimate prefers TMAP, falls back to Kakao, and clears for a new destination',async()=>{

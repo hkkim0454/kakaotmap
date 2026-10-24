@@ -121,12 +121,12 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     locate() { if (!origin && !originRequest) $('route-location').onclick(); },
     configure(url) {
       endpoint = url === 'https://barogil-route-api.hkkim0454.workers.dev' ? url : '';
-      $('route-panel').hidden = false; reset();
+      $('route-panel').hidden = !getDestination(); reset();
       startAutomatic();
     },
     destinationChanged({autoCompare = false, currentLocation = false} = {}) {
       if (currentLocation) origin = null;
-      automatic = autoCompare; reset();
+      automatic = autoCompare; $('route-panel').hidden = !getDestination(); reset();
       startAutomatic();
     }
   };
