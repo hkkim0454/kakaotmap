@@ -126,6 +126,9 @@ function selectPlace(place, example = false, currentLocation = false) {
   $('place-name').textContent = place.name;
   $('query').value = place.name;
   $('place-address').textContent = place.address;
+  $('map-destination-name').textContent = place.name;
+  $('map-destination-address').textContent = place.address;
+  $('map-destination-summary').hidden = false;
   weather.show(place);
   $('destination-label').textContent = '도착지';
   document.querySelectorAll('.result').forEach(button => button.classList.toggle('selected', button.dataset.place === `${place.name}|${place.x}|${place.y}`));
@@ -172,8 +175,11 @@ $('copy-link').onclick = async () => {
 function revealDestination(targetId = 'destination') {
   if ($(targetId).hidden) targetId = 'destination';
   $('query').blur?.();
-  $('place-name').focus?.({preventScroll:true});
-  if (targetId === 'route-panel' || !window.matchMedia?.('(min-width: 900px)').matches) {
+  const compact = !window.matchMedia?.('(min-width: 1200px)').matches;
+  if (compact && targetId === 'destination') targetId = 'map-stage';
+  const focusTarget = targetId === 'route-panel' ? $('route-title') : compact ? $('map-destination-name') : $('place-name');
+  focusTarget.focus?.({preventScroll:true});
+  if (targetId === 'route-panel' || compact) {
     // Let the keyboard/focus change settle before positioning the selected place.
     const reveal = () => $(targetId).scrollIntoView({ behavior: 'auto', block: 'start' });
     if (window.requestAnimationFrame) window.requestAnimationFrame(reveal); else reveal();
@@ -225,6 +231,7 @@ async function search(query, page = 1) {
   notice('장소를 찾고 있습니다…');
   if (page === 1) {
     state.selected = null; state.rows = []; state.pagination = null;
+    $('map-destination-summary').hidden = true;
     weather.clear();
     routePanel.destinationChanged();
     drawMap();
@@ -283,7 +290,10 @@ function launchNavigation(app, place) {
 $('route-tmap-launch').onclick = () => launchNavigation('tmap', state.selected);
 $('route-kakao-launch').onclick = () => launchNavigation('kakao', state.selected);
 $('route-naver-launch').onclick = () => launchNavigation('naver', state.selected);
-$('hero-route-options').onclick = () => $('map-stage').scrollIntoView({behavior:'smooth',block:'start'});
+$('hero-route-options').onclick = () => {
+  $('route-title').focus({preventScroll:true});
+  $('route-panel').scrollIntoView({behavior:'smooth',block:'start'});
+};
 $('hero-share').onclick = () => $('share-button').click();
 $('naver-place-button').onclick = () => {
   try {

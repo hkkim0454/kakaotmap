@@ -8,8 +8,8 @@
   <meta name="description" content="주소와 장소를 찾고, 원하는 내비 앱으로 바로 출발하세요.">
   <title>바로길 · 원하는 내비로 바로 출발</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%232a665c'/%3E%3Cpath d='M18 42L32 16L46 42L32 35Z' fill='white'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="./styles.css?v=20261024.2">
-  <script type="module" src="./app.js?v=20261024.1"></script>
+  <link rel="stylesheet" href="./styles.css?v=20261024.3">
+  <script type="module" src="./app.js?v=20261024.3"></script>
 </head>
 <body>
   <div class="bg-orbs" aria-hidden="true"></div>
@@ -39,10 +39,11 @@
     </section>
     <section id="map-stage" class="map-stage" aria-label="출발지와 길 안내">
       <div class="origin-toolbar"><strong id="route-origin-label">현재 위치를 확인해 주세요</strong><button type="button" id="route-location" class="text-button">⌖ 내 위치</button><details id="origin-options"><summary>출발지 변경</summary><form id="route-origin-form" class="route-origin-form"><label for="route-origin-query" class="sr-only">출발지 주소 또는 장소명</label><input id="route-origin-query" type="search" maxlength="100" placeholder="출발지 검색" required><button type="submit" class="secondary">검색</button></form><div id="route-origin-results" class="route-origin-results" aria-label="출발지 검색 결과"></div></details></div>
+      <div id="map-destination-summary" class="map-destination-summary" hidden><span>도착지</span><strong id="map-destination-name" tabindex="-1"></strong><small id="map-destination-address"></small></div>
       <div class="map-wrap"><div id="map" aria-label="현재 위치와 목적지"></div><div id="map-placeholder" class="map-placeholder"><span class="pin" aria-hidden="true">⌖</span><strong>지도를 불러오고 있습니다</strong><p>위치 권한을 허용하면 현재 위치가 표시됩니다.</p></div></div>
       <p id="route-status" class="route-status" role="status" aria-live="polite"></p>
       <section id="route-panel" class="route-panel" aria-labelledby="route-title">
-        <div class="route-heading"><div><h3 id="route-title">내비 앱 선택</h3><p>출발지를 확인한 뒤 원하는 앱으로 길 안내를 시작하세요.</p></div><button id="route-compare" type="button" class="text-button" disabled>새로고침 ↻</button></div>
+        <div class="route-heading"><div><h3 id="route-title" tabindex="-1">내비 앱 선택</h3><p>출발지를 확인한 뒤 원하는 앱으로 길 안내를 시작하세요.</p></div><button id="route-compare" type="button" class="text-button" disabled>새로고침 ↻</button></div>
         <div id="route-results" class="route-results" hidden>
           <button type="button" id="route-tmap-launch" class="route-summary" disabled><span class="route-provider">TMAP</span><strong id="route-tmap-time"></strong><span id="route-tmap-detail"></span><span class="route-launch-caption">TMAP 실행 ↗</span></button>
           <button type="button" id="route-kakao-launch" class="route-summary" disabled><span class="route-provider">카카오내비</span><strong id="route-kakao-time"></strong><span id="route-kakao-detail"></span><span class="route-launch-caption">카카오내비 실행 ↗</span></button>
@@ -58,7 +59,7 @@
       <div class="destination-side"><div id="share-section" class="share-section"><div class="section-kicker"><span>03</span> 공유</div><p>같은 목적지, 각자 원하는 내비로.</p><div class="share-actions"><button id="share-button" class="primary"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3m-4 4 4-4 4 4M5 12v8h14v-8"/></svg>목적지 링크 공유</button><button id="copy-link" class="secondary">링크 복사</button></div><div id="share-fallback" hidden><label for="share-url">아래 링크를 길게 눌러 복사하세요.</label><input id="share-url" readonly type="text" aria-label="목적지 공유 링크"></div></div></div>
     </section>
     <p id="empty-state" class="map-empty-hint">어디로 갈까요? 주소나 장소를 검색해 주세요.</p>
-    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.24.2</span></span><nav class="proposal-links" aria-label="서비스 제안서"><a href="./docs/proposal.html" target="_blank" rel="noopener">제안서 웹보기 ↗</a><a href="./docs/barogil-proposal.pdf" download="바로길-간편제안서.pdf">PDF 다운로드 ↓</a></nav></footer>
+    <footer><span class="brand-mini">↗ 바로길 <span class="release-version">v2026.10.24.3</span></span><nav class="proposal-links" aria-label="서비스 제안서"><a href="./docs/proposal.html" target="_blank" rel="noopener">제안서 웹보기 ↗</a><a href="./docs/barogil-proposal.pdf" download="바로길-간편제안서.pdf">PDF 다운로드 ↓</a></nav></footer>
   </main>
   <dialog id="preset-chooser" aria-labelledby="preset-chooser-title" aria-describedby="preset-chooser-address"><div class="dialog-heading"><h2 id="preset-chooser-title">어떤 내비로 갈까요?</h2><button id="preset-chooser-cancel" type="button" class="text-button">취소</button></div><strong id="preset-chooser-name" class="preset-chooser-name"></strong><p id="preset-chooser-address"></p><div class="preset-chooser-actions"><button id="preset-chooser-tmap" type="button" class="secondary">TMAP 길 안내</button><button id="preset-chooser-kakao" type="button" class="secondary">카카오내비 길 안내</button><button id="preset-chooser-naver" type="button" class="secondary">네이버 지도 내비게이션</button></div><button id="preset-chooser-details" type="button" class="text-button preset-chooser-details">지도·상세 보기</button></dialog>
   <dialog id="group-library-dialog" aria-labelledby="group-library-title"><h2 id="group-library-title">모임 열기</h2><p>이 브라우저에서 만들거나 열었던 최근 30개 링크와 작성 중인 모임입니다. 모임을 누르면 목적지 목록이 열립니다. 편집을 누르면 현재 작성 목록이 선택한 모임으로 바뀝니다.</p><p id="group-library-empty">저장된 모임이 없습니다. 받은 링크를 아래에 붙여넣어 주세요.</p><div id="group-library-list"></div><label for="group-library-url">받은 모임 링크</label><input id="group-library-url" type="url" placeholder="모임 링크 붙여넣기"><p id="group-library-error" role="status"></p><button id="group-library-load" class="primary" type="button">링크 열기</button><button id="group-library-close" class="secondary" type="button">닫기</button></dialog>
