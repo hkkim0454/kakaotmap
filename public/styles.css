@@ -141,7 +141,8 @@ button{white-space:nowrap}
 @media(max-width:700px){.map-home:has(#destination:not([hidden])) .map-stage{padding-top:8px}}
 .map-destination-summary{display:none}
 @media(min-width:1200px){
-  .map-home{grid-template-columns:minmax(320px,430px) minmax(0,1fr) minmax(0,380px);grid-template-areas:"steps steps steps" "search map map" "presets map map" "top map map" "bottom map map" "weather weather side" "footer footer footer";column-gap:16px}
+  .map-home{grid-template-columns:minmax(320px,430px) minmax(0,1fr) minmax(0,380px);grid-template-areas:"steps steps steps" "search map map" "presets map map" "top map map" "bottom map map" "side weather weather" "footer footer footer";column-gap:16px}
+  .map-home .weather-panel{margin:18px 0 0}
   .map-home .search-panel{display:grid;align-content:start;gap:12px;margin:0 0 14px;padding:20px}
   .map-home .search-form{width:100%}
   .map-home .presets-panel{margin:0 0 14px}
@@ -154,7 +155,7 @@ button{white-space:nowrap}
   .map-home #empty-state{margin:0;border-radius:26px}
 }
 @media(max-width:1199px){
-  .map-home{grid-template-areas:"steps" "presets" "search" "map" "top" "bottom" "weather" "side" "footer"}
+  .map-home{grid-template-areas:"steps" "presets" "search" "map" "top" "bottom" "side" "weather" "footer"}
   .map-home .search-panel{margin:0;border-bottom:0;border-radius:26px 26px 0 0;box-shadow:none}
   .map-home .map-stage,.map-home:has(#destination[hidden]) .map-stage,.map-home:has(#destination:not([hidden])) .map-stage{margin:0;padding-top:10px;border-top:0;border-radius:0 0 26px 26px}
   .map-home .hero-top,.map-home .hero-bottom,.map-home #empty-state{display:none}
