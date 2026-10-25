@@ -103,6 +103,53 @@ test('requesting fresh location clears old origin and stays disabled after permi
  deny();assert.equal(f.get('route-compare').disabled,true);
  assert.doesNotMatch(f.get('route-origin-label').textContent,/서울역/);
 });
+test('destination selection reuses an in-flight location lookup',async()=>{
+ let completeLocation, locationCalls=0, routeCalls=0;
+ const geolocation={getCurrentPosition(ok){locationCalls++;completeLocation=ok;}};
+ const f=fixture(async()=>{routeCalls++;return good();},geolocation);
+ f.panel.locate();
+ f.change({autoCompare:true});
+ assert.equal(locationCalls,1);
+ completeLocation({coords:{longitude:126.97,latitude:37.55}});
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(routeCalls,1);
+ assert.equal(f.get('route-tmap-time').textContent,'27분');
+});
+test('first streamed provider time appears while the other provider is still loading',async()=>{
+ let stream;
+ const fetcher=async()=>new Response(new ReadableStream({start(controller){stream=controller;}}),{
+  headers:{'Content-Type':'application/x-ndjson'}
+ });
+ const f=fixture(fetcher);
+ f.change({autoCompare:true});
+ await new Promise(resolve=>setTimeout(resolve,0));
+ stream.enqueue(new TextEncoder().encode(JSON.stringify({route:{provider:'tmap',status:'ok',durationSeconds:1563,distanceMeters:12028,tollWon:0},queriedAt:'2026-10-13T11:21:53Z'})+'\n'));
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(f.get('route-tmap-time').textContent,'27분');
+ assert.equal(f.get('route-kakao-time').textContent,'조회 중…');
+ stream.enqueue(new TextEncoder().encode(JSON.stringify({route:{provider:'kakao',status:'ok',durationSeconds:1700,distanceMeters:13000,tollWon:0},queriedAt:'2026-10-13T11:21:53Z'})+'\n'));
+ stream.close();
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(f.get('route-kakao-time').textContent,'29분');
+});
+test('Kakao time appears first and TMAP later becomes the arrival estimate',async()=>{
+ let stream;const updates=[];
+ const fetcher=async()=>new Response(new ReadableStream({start(controller){stream=controller;}}),{
+  headers:{'Content-Type':'application/x-ndjson'}
+ });
+ const f=fixture(fetcher,undefined,result=>{if(result) updates.push(result.provider);});
+ f.change({autoCompare:true});
+ await new Promise(resolve=>setTimeout(resolve,0));
+ const send=route=>stream.enqueue(new TextEncoder().encode(JSON.stringify({route,queriedAt:'2026-10-13T11:21:53Z'})+'\n'));
+ send({provider:'kakao',status:'ok',durationSeconds:1700,distanceMeters:13000,tollWon:0});
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(f.get('route-kakao-time').textContent,'29분');
+ assert.equal(f.get('route-tmap-time').textContent,'조회 중…');
+ send({provider:'tmap',status:'ok',durationSeconds:1563,distanceMeters:12028,tollWon:0});
+ stream.close();
+ await new Promise(resolve=>setTimeout(resolve,0));
+ assert.deepEqual(updates,['kakao','tmap']);
+});
 test('route choices appear only after choosing a destination',()=>{
  const f=fixture(good,undefined,undefined,null);
  assert.equal(f.get('route-panel').hidden,true);

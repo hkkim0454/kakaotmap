@@ -42,6 +42,30 @@ test('normalizes two providers and preserves zero toll', async () => {
     assert.equal(sql.prepare('SELECT used FROM route_usage').get().used, 1);
   } finally { sql.close(); }
 });
+test('streaming comparison sends the first provider before the second finishes', async () => {
+  const { env, sql } = fixture();
+  let releaseKakao;
+  const slowKakao = new Promise(resolve => { releaseKakao = resolve; });
+  const streamed = request();
+  streamed.headers.set('Accept', 'application/x-ndjson');
+  try {
+    const pending = handleRequest(streamed, env, async (url, options) => {
+      if (String(url).includes('sk.com')) return upstream(url, options);
+      await slowKakao;
+      return upstream(url, options);
+    }, now);
+    const response = await Promise.race([pending, new Promise(resolve => setTimeout(() => resolve(null), 50))]);
+    assert.ok(response, 'the response should start while Kakao is still pending');
+    assert.match(response.headers.get('Content-Type'), /application\/x-ndjson/);
+    const reader = response.body.getReader();
+    const first = new TextDecoder().decode((await reader.read()).value).trim();
+    assert.equal(JSON.parse(first).route.provider, 'tmap');
+    releaseKakao();
+    const second = new TextDecoder().decode((await reader.read()).value).trim();
+    assert.equal(JSON.parse(second).route.provider, 'kakao');
+    await reader.cancel();
+  } finally { releaseKakao(); sql.close(); }
+});
 test('global quota stops simultaneous comparisons after 400 reservations', async () => {
   const { env, sql } = fixture();
   try {

@@ -1,7 +1,7 @@
 const number = value => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 export function mountRoutePanel({ document, navigator, getDestination, searchPlaces, onOriginChanged = () => {}, onRoutesUpdated = () => {}, fetcher = fetch }) {
   const $ = id => document.getElementById(id);
-  let endpoint = '', origin = null, generation = 0, originRequest = 0, controller, automatic = false;
+  let endpoint = '', origin = null, generation = 0, originRequest = 0, controller, automatic = false, locating = false;
   function reset() {
     generation++; controller?.abort();
     onRoutesUpdated(null);
@@ -26,18 +26,20 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     if (automatic) $('route-compare').onclick();
   }
   $('route-location').onclick = () => {
-    const request = ++originRequest; origin = null; reset();
+    const request = ++originRequest; locating = true; origin = null; reset();
     onOriginChanged(null);
     $('route-origin-query').value = '';
     $('route-origin-label').textContent = '출발지를 선택해주세요';
     $('route-origin-results').replaceChildren();
-    if (!navigator.geolocation) { $('route-status').textContent = '현재 위치를 사용할 수 없습니다. 출발지를 검색해주세요.'; return; }
+    if (!navigator.geolocation) { locating = false; $('route-status').textContent = '현재 위치를 사용할 수 없습니다. 출발지를 검색해주세요.'; return; }
     $('route-status').textContent = '현재 위치를 확인하고 있습니다…';
     navigator.geolocation.getCurrentPosition(position => {
       if (request !== originRequest) return;
+      locating = false;
       selectOrigin({ name: '현재 위치', x: position.coords.longitude, y: position.coords.latitude });
     }, () => {
       if (request === originRequest) {
+        locating = false;
         $('origin-options').open = true;
         $('route-status').textContent = '위치 권한을 허용하거나 출발지를 검색해주세요.';
       }
@@ -47,6 +49,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     event.preventDefault();
     const query = $('route-origin-query').value.trim(); if (!query) return;
     const request = ++originRequest;
+    locating = false;
     origin = null; reset();
     onOriginChanged(null);
     $('route-origin-label').textContent = '검색 결과에서 출발지를 선택해주세요';
@@ -72,32 +75,55 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
     for (const provider of ['tmap','kakao']) $('route-' + provider + '-time').textContent = '조회 중…';
     $('route-compare').disabled = true; $('route-compare').textContent = '비교 중…';
     $('route-status').textContent = '티맵과 카카오의 추천 경로를 확인하고 있습니다…';
+    let successes = 0, preferred = null, queriedAt = '';
+    const showRoute = (route, time) => {
+      if (!['tmap','kakao'].includes(route?.provider)) return;
+      const provider = route.provider;
+      if (route.status === 'ok' && number(route.durationSeconds) && number(route.distanceMeters)) {
+        successes++;
+        const minutes = Math.max(1, Math.ceil(route.durationSeconds / 60));
+        $('route-' + provider + '-time').textContent = minutes >= 60 ? `${Math.floor(minutes / 60)}시간 ${minutes % 60}분` : `${minutes}분`;
+        $('route-' + provider + '-detail').textContent = `${(route.distanceMeters / 1000).toFixed(1)}km · 통행료 ${number(route.tollWon) ? route.tollWon.toLocaleString('ko-KR') + '원' : '정보 없음'}`;
+        if (!preferred || provider === 'tmap') {
+          preferred = provider;
+          onRoutesUpdated({provider, queriedAt:time, durationSeconds:route.durationSeconds, distanceMeters:route.distanceMeters});
+        }
+      } else {
+        $('route-' + provider + '-time').textContent = '앱에서 확인';
+        $('route-' + provider + '-detail').textContent = '내비 앱에서 경로를 확인해주세요.';
+      }
+      queriedAt = time;
+    };
     try {
-      const response = await fetcher(`${endpoint}/compare`, { method: 'POST', signal: controller.signal,
-        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({origin:{x:origin.x,y:origin.y},destination:{x:destination.x,y:destination.y}}) });
+      const response = await fetcher(`${endpoint}/compare`, { method: 'POST', signal: activeController.signal,
+        headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' }, body: JSON.stringify({origin:{x:origin.x,y:origin.y},destination:{x:destination.x,y:destination.y}}) });
       if (request !== generation) return;
       if (!response.ok) {
         $('route-status').textContent = response.status === 429 ? '오늘의 공용 경로 조회 한도에 도달했습니다. 내비 앱에서 직접 확인해 주세요.' : '경로 비교 서버에 연결하지 못했습니다. 잠시 후 다시 눌러주세요.';
         return;
       }
-      const data = await response.json(); if (request !== generation) return;
-      if (!Array.isArray(data.routes)) throw new Error('Invalid response');
-      const preferred = ['tmap','kakao'].map(provider => data.routes.find(item => item.provider === provider && item.status === 'ok' && number(item.durationSeconds) && number(item.distanceMeters))).find(Boolean);
-      onRoutesUpdated(preferred ? {provider:preferred.provider,queriedAt:data.queriedAt,durationSeconds:preferred.durationSeconds,distanceMeters:preferred.distanceMeters} : null);
-      let successes = 0;
-      for (const provider of ['tmap', 'kakao']) {
-        const route = data.routes.find(item => item.provider === provider);
-        if (route?.status === 'ok' && number(route.durationSeconds) && number(route.distanceMeters)) {
-          successes++;
-          const minutes = Math.max(1, Math.ceil(route.durationSeconds / 60));
-          $('route-' + provider + '-time').textContent = minutes >= 60 ? `${Math.floor(minutes / 60)}시간 ${minutes % 60}분` : `${minutes}분`;
-          $('route-' + provider + '-detail').textContent = `${(route.distanceMeters / 1000).toFixed(1)}km · 통행료 ${number(route.tollWon) ? route.tollWon.toLocaleString('ko-KR') + '원' : '정보 없음'}`;
-        } else {
-          $('route-' + provider + '-time').textContent = '앱에서 확인';
-          $('route-' + provider + '-detail').textContent = '내비 앱에서 경로를 확인해주세요.';
+      if (response.headers?.get('Content-Type')?.includes('application/x-ndjson') && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        while (true) {
+          const {done, value} = await reader.read();
+          if (request !== generation) { await reader.cancel(); return; }
+          buffer += done ? decoder.decode() : decoder.decode(value, {stream:true});
+          let newline;
+          while ((newline = buffer.indexOf('\n')) >= 0) {
+            const line = buffer.slice(0,newline).trim(); buffer = buffer.slice(newline+1);
+            if (line) { const item = JSON.parse(line); showRoute(item.route,item.queriedAt); }
+          }
+          if (done) break;
         }
+        if (buffer.trim()) { const item = JSON.parse(buffer); showRoute(item.route,item.queriedAt); }
+      } else {
+        const data = await response.json(); if (request !== generation) return;
+        if (!Array.isArray(data.routes)) throw new Error('Invalid response');
+        for (const provider of ['tmap','kakao']) showRoute(data.routes.find(item => item.provider === provider) || {provider,status:'error'},data.queriedAt);
       }
-      const queried = new Date(data.queriedAt);
+      const queried = new Date(queriedAt);
       $('route-status').textContent = successes ? `${Number.isNaN(queried.getTime()) ? '' : queried.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'}) + ' 기준 · '}추천 경로 비교 결과입니다.` : '두 서비스에서 경로를 조회하지 못했습니다. 아래 내비 앱에서 확인해주세요.';
       $('route-results').hidden = false;
 
@@ -115,7 +141,7 @@ export function mountRoutePanel({ document, navigator, getDestination, searchPla
   function startAutomatic() {
     if (!automatic || !endpoint || !getDestination()) return;
     if (origin) $('route-compare').onclick();
-    else $('route-location').onclick();
+    else if (!locating) $('route-location').onclick();
   }
   return {
     locate() { if (!origin && !originRequest) $('route-location').onclick(); },

@@ -5,7 +5,7 @@ import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { validatePreset } from './presets-store.js';
 import { mountPresets } from './presets-ui.js?v=20261014.1';
-import { mountRoutePanel } from './route-panel.js?v=20261024.1';
+import { mountRoutePanel } from './route-panel.js?v=20261025.1';
 import { createMapView } from './map-view.js?v=20261021.1';
 import { mountPresetChooser } from './preset-chooser.js';
 import { mountWeather } from './weather.js?v=20261021.1';
@@ -482,6 +482,7 @@ $('group-order-close').onclick=()=>$('group-order-dialog').close();
 $('group-order-copy').onclick=async()=>{rememberGroup($('group-order-url').value);try{await copyText(await compactLink($('group-order-url').value));toast('변경한 순서의 새 링크를 복사했습니다.');}catch{$('group-order-url').focus();$('group-order-url').select();}};
 $('group-order-apply').onclick=()=>{rememberGroup($('group-order-url').value);$('group-order-dialog').close();location.href=$('group-order-url').value;};
 async function initialize() {
+  routePanel.locate();
   try {
     const response = await fetch('./config.json', {cache:'no-store'});
     if (response.ok) {
@@ -498,7 +499,7 @@ async function initialize() {
     (async () => {
       await loadScript(`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`);
       await new Promise((resolve,reject) => { const timer = setTimeout(() => reject(new Error('지도 로딩 시간 초과')),10000); kakao.maps.load(() => {clearTimeout(timer); resolve();}); });
-      state.mapsReady = true; drawMap(); routePanel.locate();
+      state.mapsReady = true; drawMap();
     })(),
     (async () => {
       await loadScript('https://t1.kakaocdn.net/kakao_js_sdk/2.8.3/kakao.min.js');

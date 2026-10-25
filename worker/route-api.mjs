@@ -2,7 +2,7 @@
 // Secrets: TMAP_APP_KEY, KAKAO_REST_API_KEY. D1 binding: ROUTE_DB.
 // Short links store only explicitly shared destination URLs; no API keys or origin history.
 const SITE = 'https://hkkim0454.github.io';
-const VERSION = '2026-10-14.1';
+const VERSION = '2026-10-25.1';
 const DAILY_LIMIT = 400;
 const SCHEMA = 'CREATE TABLE IF NOT EXISTS route_usage (day TEXT PRIMARY KEY, used INTEGER NOT NULL)';
 const RESERVE = `INSERT INTO route_usage(day, used) VALUES (?1, 1)
@@ -177,7 +177,22 @@ export async function handleRequest(request, env, fetcher = fetch, now = () => n
     reservation = await env.ROUTE_DB.prepare(RESERVE).bind(day, DAILY_LIMIT).first();
   } catch { return json({ error: '조회 횟수 저장소에 연결할 수 없어 경로 조회를 중단했습니다.' }, 503); }
   if (!reservation) return json({ error: '오늘의 경로 비교 한도에 도달했습니다. 내비 앱 길안내는 계속 사용할 수 있습니다.', dailyLimit: DAILY_LIMIT }, 429);
-  const routes = await Promise.all(['tmap', 'kakao'].map(provider => queryProvider(provider, body.origin, body.destination, env, fetcher)));
+  const providers = ['tmap', 'kakao'];
+  if (request.headers.get('Accept')?.includes('application/x-ndjson')) {
+    let cancelled = false;
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      start(controller) {
+        Promise.all(providers.map(async provider => {
+          const route = await queryProvider(provider, body.origin, body.destination, env, fetcher);
+          if (!cancelled) controller.enqueue(encoder.encode(JSON.stringify({ route, queriedAt: date.toISOString() }) + '\n'));
+        })).then(() => { if (!cancelled) controller.close(); });
+      },
+      cancel() { cancelled = true; }
+    });
+    return new Response(stream, { headers: { ...headers, 'Content-Type': 'application/x-ndjson; charset=utf-8' } });
+  }
+  const routes = await Promise.all(providers.map(provider => queryProvider(provider, body.origin, body.destination, env, fetcher)));
   return json({ routes, queriedAt: date.toISOString(), remaining: DAILY_LIMIT - reservation.used, dailyLimit: DAILY_LIMIT });
 }
 
