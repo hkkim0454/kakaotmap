@@ -119,6 +119,21 @@ function validSharedUrl(raw) {
     return place({name:u.searchParams.get('name'),address:u.searchParams.get('address'),x:Number(u.searchParams.get('x')),y:Number(u.searchParams.get('y'))});
   }catch{return false;}
 }
+const escapeHtml=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+function formatGroupDate(date){const [y,m,d]=date.split('-').map(Number);return `${m}/${d}(${'일월화수목금토'[new Date(Date.UTC(y,m-1,d)).getUTCDay()]})`;}
+// Called only with URLs that passed validSharedUrl.
+function previewText(raw) {
+  const u=new URL(raw);
+  if(u.hash.startsWith('#group=')) {
+    const g=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(u.hash.slice(7).replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0))));
+    return {title:g.name.trim()+(g.date?' · '+formatGroupDate(g.date):''),description:g.places.map(p=>p.name).join(', ')};
+  }
+  return {title:u.searchParams.get('name'),description:u.searchParams.get('address')||'길 안내'};
+}
+function previewPage(target,self) {
+  const {title,description}=previewText(target);const t=escapeHtml(title),d=escapeHtml(description),to=escapeHtml(target);
+  return `<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>${t}</title><meta name="description" content="${d}"><meta property="og:type" content="website"><meta property="og:site_name" content="바로길"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:url" content="${escapeHtml(self)}"><meta name="twitter:card" content="summary"><meta http-equiv="refresh" content="0;url=${to}"></head><body><p><a href="${to}">${t} 길 안내 열기</a></p></body></html>`;
+}
 async function shareRequest(request,env,path,json,now) {
   if(!env.ROUTE_DB)return json({error:'공유 저장소 연결이 필요합니다.'},503);
   try {
@@ -128,6 +143,8 @@ async function shareRequest(request,env,path,json,now) {
       if(request.headers.get('Origin')!==SITE)return json({error:'허용되지 않은 사이트입니다.'},403);
       let body;try{body=await readJson(request,16384);}catch{return json({error:'공유 정보가 올바르지 않습니다.'},400);}
       if(!validSharedUrl(body?.url))return json({error:'바로길 목적지 링크만 저장할 수 있습니다.'},400);
+      const existing=await env.ROUTE_DB.prepare('SELECT id FROM share_links WHERE url=?1 LIMIT 1').bind(body.url).first();
+      if(existing)return json({id:existing.id},200);
       const day=new Date(now().getTime()+9*3600000).toISOString().slice(0,10);
       const id=crypto.randomUUID().replaceAll('-','').slice(0,20);
       // Global daily cap independent from paid route APIs; insert is atomic.
@@ -139,7 +156,7 @@ async function shareRequest(request,env,path,json,now) {
     const match=path.match(/^\/(?:s|links)\/([a-f0-9]{20})$/);if(!match)return json({error:'링크를 찾을 수 없습니다.'},404);
     const row=await env.ROUTE_DB.prepare('SELECT url FROM share_links WHERE id=?1').bind(match[1]).first();
     if(!row||!validSharedUrl(row.url))return json({error:'링크를 찾을 수 없습니다.'},404);
-    if(path.startsWith('/s/'))return new Response(null,{status:302,headers:{Location:row.url,'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
+    if(path.startsWith('/s/'))return new Response(previewPage(row.url,new URL(request.url).href),{status:200,headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer','Content-Security-Policy':"default-src 'none'"}});
     return json({url:row.url});
   }catch{return json({error:'공유 링크 저장소에 연결하지 못했습니다.'},503);}
 }
