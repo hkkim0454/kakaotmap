@@ -1,6 +1,6 @@
 import { shortenLink, expandLink } from './short-links.js?v=20261014.8';
 import { platform, tmapUrl, naverUrl, naverPlaceUrl, kakaoDestination, normalizeResults } from './navigation.js?v=20261020.1';
-import { createGroupUrl, readGroupUrl, shareGroup } from './group-share.js?v=20261024.5';
+import { createGroupUrl, readGroupUrl, shareGroup, isGroupPast, formatGroupDate } from './group-share.js?v=20261126.1';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { validatePreset } from './presets-store.js';
@@ -319,7 +319,7 @@ try {const saved=JSON.parse(localStorage.getItem(libraryKey));if(Array.isArray(s
 function rememberGroup(url,explicit=true) {
   if(!explicit && deletedGroups.includes(url))return;
   try {
-    const group=readGroupUrl(url);if(!group)return;
+    const group=readGroupUrl(url);if(!group||isGroupPast(group))return;
     if(explicit && deletedGroups.includes(url)){deletedGroups=deletedGroups.filter(item=>item!==url);localStorage.setItem(deletedGroupsKey,JSON.stringify(deletedGroups));}
     groupLibrary=[{name:group.name,url},...groupLibrary.filter(item=>item.url!==url)].slice(0,30);
     localStorage.setItem(libraryKey,JSON.stringify(groupLibrary));
@@ -328,13 +328,13 @@ function rememberGroup(url,explicit=true) {
 async function openGroup(url) {
   try {
     const group=readGroupUrl(await expandLink(url.trim()));if(!group)throw new Error();
-    const safeUrl=createGroupUrl(location.href,group.name,group.places);
+    const safeUrl=createGroupUrl(location.href,group.name,group.places,group.date||'');
     rememberGroup(safeUrl);$('group-library-dialog').close();location.href=safeUrl;
   }catch {$('group-library-error').textContent='올바른 모임 링크를 붙여넣어 주세요.';}
 }
 function editGroup(group) {
-  draft={name:group.name,places:group.places.map(p=>({...p}))};
-  $('group-name').value=draft.name;saveDraft();$('group-library-dialog').close();$('group-create').click();
+  draft={name:group.name,places:group.places.map(p=>({...p})),date:group.date||''};
+  $('group-name').value=draft.name;$('group-date').value=draft.date;saveDraft();$('group-library-dialog').close();$('group-create').click();
   $('group-title').textContent='모임 편집';
 }
 async function loadGroup(url) {
@@ -345,9 +345,10 @@ async function loadGroup(url) {
 }
 function renderLibrary() {
   $('group-library-list').replaceChildren();$('group-library-error').textContent='';$('group-library-url').value='';
+  const current=groupLibrary.filter(item=>!isGroupPast(readGroupUrl(item.url)));if(current.length!==groupLibrary.length){groupLibrary=current;try{localStorage.setItem(libraryKey,JSON.stringify(groupLibrary));}catch{}}
   const entries=[...groupLibrary];
-  if(draft.name.trim() && draft.places.length){const url=createGroupUrl(location.href,draft.name,draft.places);if(!entries.some(item=>item.url===url))entries.unshift({url,draft:true});}
-  entries.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=(item.draft?'작성 중 · ':'')+group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);const remove=document.createElement('button');remove.type='button';remove.className='text-button library-delete';remove.textContent='삭제';remove.setAttribute('aria-label',group.name+' 삭제');remove.onclick=()=>deleteGroup(item.url,group.name);row.append(button,edit,remove);$('group-library-list').append(row);});
+  if(draft.name.trim() && draft.places.length){const url=createGroupUrl(location.href,draft.name,draft.places,draft.date);if(!entries.some(item=>item.url===url))entries.unshift({url,draft:true});}
+  entries.forEach(item=>{const button=document.createElement('button');button.type='button';button.className='secondary';const group=readGroupUrl(item.url);button.textContent=(item.draft?'작성 중 · ':'')+(group.date?formatGroupDate(group.date)+' · ':'')+group.name+' · '+group.places.map(p=>p.name).join(', ');button.onclick=()=>openGroup(item.url);const row=document.createElement('div'),edit=document.createElement('button');row.className='library-row';edit.type='button';edit.className='text-button';edit.textContent='편집';edit.setAttribute('aria-label',group.name+' 편집');edit.onclick=()=>loadGroup(item.url);const remove=document.createElement('button');remove.type='button';remove.className='text-button library-delete';remove.textContent='삭제';remove.setAttribute('aria-label',group.name+' 삭제');remove.onclick=()=>deleteGroup(item.url,group.name);row.append(button,edit,remove);$('group-library-list').append(row);});
   $('group-library-empty').hidden=entries.length>0;
 }
 $('group-library-open').onclick=()=>{renderLibrary();$('group-library-dialog').showModal();};
@@ -356,24 +357,24 @@ function deleteGroup(url,name) {
   try {
     const remaining=groupLibrary.filter(item=>item.url!==url);
     const deleted=[...new Set([...deletedGroups,url])];
-    const matchesDraft=draft.name.trim() && draft.places.length && createGroupUrl(location.href,draft.name,draft.places)===url;
+    const matchesDraft=draft.name.trim() && draft.places.length && createGroupUrl(location.href,draft.name,draft.places,draft.date)===url;
     localStorage.setItem(deletedGroupsKey,JSON.stringify(deleted));
     localStorage.setItem(libraryKey,JSON.stringify(remaining));
-    if(matchesDraft){localStorage.removeItem(draftKey);draft={name:'',places:[]};}
+    if(matchesDraft){localStorage.removeItem(draftKey);draft={name:'',places:[],date:''};}
     deletedGroups=deleted;groupLibrary=remaining;renderLibrary();toast('이 브라우저의 목록에서 삭제했습니다.');
   }catch {$('group-library-error').textContent='삭제하지 못했습니다. 브라우저 저장 공간을 확인해 주세요.';}
 }
 $('group-library-load').onclick=()=>openGroup($('group-library-url').value);
 $('group-library-close').onclick=()=>$('group-library-dialog').close();
 const draftKey = 'barogil-group-draft-v1';
-let draft = {name:'',places:[]}, groupSearchId=0;
+let draft = {name:'',places:[],date:''}, groupSearchId=0;
 try {
   const saved=JSON.parse(localStorage.getItem(draftKey));
   if(saved && typeof saved.name==='string' && saved.name.length<=60 && Array.isArray(saved.places) && saved.places.length<=8)
-    draft={name:saved.name,places:saved.places.map(validatePreset)};
+    draft={name:saved.name,places:saved.places.map(validatePreset),date:typeof saved.date==='string'?saved.date:''};
 } catch { /* Empty draft when storage is unavailable or invalid. */ }
 function saveDraft() {
-  draft.name=$('group-name').value;
+  draft.name=$('group-name').value;draft.date=$('group-date').value;
   $('group-output').hidden=true;
   try {localStorage.setItem(draftKey,JSON.stringify(draft));$('group-error').textContent='';}
   catch {$('group-error').textContent='이 브라우저에 임시 저장할 수 없습니다. 닫기 전에 링크를 복사해 주세요.';}
@@ -411,12 +412,12 @@ function addDraft(place) {
 }
 $('group-create').onclick=()=>{
   $('group-title').textContent='모임 링크 만들기';
-  $('group-name').value=draft.name;renderDraft();$('group-output').hidden=true;$('group-error').textContent='';
+  $('group-name').value=draft.name;$('group-date').value=draft.date;renderDraft();$('group-output').hidden=true;$('group-error').textContent='';
   $('group-add-selected').hidden=!state.selected;$('group-search-results').replaceChildren();$('group-search-query').value='';
   $('group-dialog').showModal();
 };
 $('group-add-selected').onclick=()=>{if(state.selected)addDraft(state.selected);};
-$('group-name').oninput=saveDraft;
+$('group-name').oninput=saveDraft;$('group-date').oninput=saveDraft;
 $('group-close-bottom').onclick=$('group-close').onclick=()=>$('group-dialog').close();
 $('group-dialog').onclose=()=>{groupSearchId++;$('group-search-button').disabled=false;};
 $('group-search-query').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();$('group-search-button').click();}};
@@ -436,13 +437,13 @@ $('group-search-button').onclick=async()=>{
   finally {if(id===groupSearchId)$('group-search-button').disabled=false;}
 };
 $('group-form').onsubmit=async event=>{event.preventDefault();try {
-  $('group-url').value=createGroupUrl(location.href,$('group-name').value,draft.places);
+  $('group-url').value=createGroupUrl(location.href,$('group-name').value,draft.places,$('group-date').value);
   const original=$('group-url').value;rememberGroup(original);$('group-output').hidden=false;$('group-error').textContent='짧은 링크를 만들고 있습니다…';
   const compact=await compactLink(original);if(!$('group-output').hidden && $('group-url').value===original){$('group-url').value=compact;$('group-error').textContent=compact===original?'현재 기존 링크를 사용할 수 있습니다.':'';}
 } catch(error){$('group-output').hidden=true;$('group-error').textContent=error.message;}};
 $('group-copy').onclick=async()=>{try{await copyText(await compactLink($('group-url').value));toast('모임 링크를 복사했습니다.');}catch{$('group-url').focus();$('group-url').select();}};
 if (groupSnapshot) {
-  const groupUrl=createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places);
+  const groupUrl=createGroupUrl(location.href,groupSnapshot.name,groupSnapshot.places,groupSnapshot.date||'');
   rememberGroup(groupUrl,false);
   $('shared-presets').hidden=false;
   $('presets-title').textContent=groupSnapshot.name;
@@ -475,7 +476,7 @@ let orderedPlaces=[];
 function renderOrder() {
   $('group-order-list').replaceChildren();
   orderedPlaces.forEach((p,i)=>{const row=document.createElement('div'),name=document.createElement('span');row.className='group-draft-row';name.textContent=`${i+1}. ${p.name}`;row.append(name,moveButtons(orderedPlaces,i,renderOrder));$('group-order-list').append(row);});
-  $('group-order-url').value=createGroupUrl(location.href,groupSnapshot.name,orderedPlaces);
+  $('group-order-url').value=createGroupUrl(location.href,groupSnapshot.name,orderedPlaces,groupSnapshot.date||'');
 }
 $('group-order-open').onclick=()=>{orderedPlaces=groupSnapshot.places.map(p=>({...p}));renderOrder();$('group-order-dialog').showModal();};
 $('group-order-close').onclick=()=>$('group-order-dialog').close();
