@@ -456,13 +456,15 @@ if (groupSnapshot) {
     $('group-share-url').focus();
     $('group-share-url').select();
   };
+  // Prepare the short link early: the share sheet must open right after the tap.
+  let groupShareUrl=groupUrl;shortenLink(groupUrl).then(short=>{groupShareUrl=short;}).catch(()=>{});
   $('group-share-button').onclick=async()=>{
-    const result=await shareGroup({url:groupUrl,name:groupSnapshot.name,placeCount:groupSnapshot.places.length,navigator,copy:copyText,fallback:showGroupShareFallback});
+    const result=await shareGroup({url:groupShareUrl,name:groupSnapshot.name,placeCount:groupSnapshot.places.length,navigator,copy:copyText,fallback:showGroupShareFallback});
     if(result==='copied')toast('모임 링크를 복사했습니다. 원하는 사람에게 보내세요.');
   };
   $('group-copy-link').onclick=async()=>{
-    try{await copyText(groupUrl);toast('모임 링크를 복사했습니다.');}
-    catch{showGroupShareFallback(groupUrl);}
+    try{await copyText(groupShareUrl);toast('모임 링크를 복사했습니다.');}
+    catch{showGroupShareFallback(groupShareUrl);}
   };
   $('group-order-open').hidden=false;
   $('group-edit-open').hidden=false;
