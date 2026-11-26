@@ -2,7 +2,7 @@
 // Secrets: TMAP_APP_KEY, KAKAO_REST_API_KEY. D1 binding: ROUTE_DB.
 // Short links store only explicitly shared destination URLs; no API keys or origin history.
 const SITE = 'https://hkkim0454.github.io';
-const VERSION = '2026-10-25.1';
+const VERSION = '2026-11-26.1';
 const DAILY_LIMIT = 400;
 const SCHEMA = 'CREATE TABLE IF NOT EXISTS route_usage (day TEXT PRIMARY KEY, used INTEGER NOT NULL)';
 const RESERVE = `INSERT INTO route_usage(day, used) VALUES (?1, 1)

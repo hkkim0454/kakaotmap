@@ -26,3 +26,5 @@
 - 앱 실행 시 경로가 다시 계산될 수 있으므로 비교 결과는 조회 시점의 예상값입니다.
 
 참조: [TMAP 자동차 경로](https://tmap-skopenapi.readme.io/reference/자동차-경로안내), [카카오 자동차 길찾기](https://developers.kakaomobility.com/guide/navi-api/directions), [D1 prepared statements](https://developers.cloudflare.com/d1/worker-api/prepared-statements/).
+
+`2026-11-26.1`: 모임 링크에 선택 입력인 날짜(`date`)를 허용합니다. 짧은 링크(`/s/<id>`)는 302 이동 대신 목적지·모임 이름이 담긴 미리보기(OG 태그) 페이지를 보여 준 뒤 바로 사이트로 이동합니다. 이미 저장된 주소로 짧은 링크를 다시 요청하면 기존 id를 돌려주며 일일 한도를 쓰지 않습니다.
