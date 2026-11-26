@@ -1,6 +1,6 @@
 import { shortenLink, expandLink } from './short-links.js?v=20261014.8';
 import { platform, tmapUrl, naverUrl, naverPlaceUrl, kakaoDestination, normalizeResults } from './navigation.js?v=20261020.1';
-import { createGroupUrl, readGroupUrl, shareGroup, isGroupPast, formatGroupDate } from './group-share.js?v=20261126.1';
+import { createGroupUrl, readGroupUrl, shareGroup, isGroupPast, formatGroupDate, safeGroupDate } from './group-share.js?v=20261126.1';
 import { createShareUrl, readSharedPlace } from './share.js';
 import { verifySettingsPassword, validJavascriptKey } from './settings-lock.js';
 import { validatePreset } from './presets-store.js';
@@ -371,10 +371,10 @@ let draft = {name:'',places:[],date:''}, groupSearchId=0;
 try {
   const saved=JSON.parse(localStorage.getItem(draftKey));
   if(saved && typeof saved.name==='string' && saved.name.length<=60 && Array.isArray(saved.places) && saved.places.length<=8)
-    draft={name:saved.name,places:saved.places.map(validatePreset),date:typeof saved.date==='string'?saved.date:''};
+    draft={name:saved.name,places:saved.places.map(validatePreset),date:safeGroupDate(saved.date)};
 } catch { /* Empty draft when storage is unavailable or invalid. */ }
 function saveDraft() {
-  draft.name=$('group-name').value;draft.date=$('group-date').value;
+  draft.name=$('group-name').value;draft.date=safeGroupDate($('group-date').value);
   $('group-output').hidden=true;
   try {localStorage.setItem(draftKey,JSON.stringify(draft));$('group-error').textContent='';}
   catch {$('group-error').textContent='이 브라우저에 임시 저장할 수 없습니다. 닫기 전에 링크를 복사해 주세요.';}

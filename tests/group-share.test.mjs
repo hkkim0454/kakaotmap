@@ -53,3 +53,7 @@ test('groups expire after the meeting day in Korea time',()=>{
  assert.equal(groupShare.isGroupPast({},new Date('2030-01-01T00:00:00Z')),false);
  assert.equal(groupShare.formatGroupDate('2026-11-28'),'11/28(토)');
 });
+test('draft dates keep only real calendar dates so the library never breaks',()=>{
+ assert.equal(groupShare.safeGroupDate('2026-11-28'),'2026-11-28');
+ for(const bad of ['0026-11-28','20266-11-28','2026-02-30','',undefined,null,42]) assert.equal(groupShare.safeGroupDate(bad),'');
+});
