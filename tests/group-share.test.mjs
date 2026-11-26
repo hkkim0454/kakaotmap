@@ -38,3 +38,18 @@ test('group share exposes the link if sharing fails, but stays quiet on cancella
  await groupShare.shareGroup({...args,navigator:{share:async()=>{throw Object.assign(new Error('cancelled'),{name:'AbortError'});}}});
  assert.deepEqual(fallback,['https://example.com/group']);
 });
+test('group date travels in the link and is optional',()=>{
+ const url=createGroupUrl('https://example.com/','모임',[place],'2026-11-28');
+ assert.equal(readGroupUrl(url).date,'2026-11-28');
+ assert.equal('date' in readGroupUrl(createGroupUrl('https://example.com/','모임',[place])),false);
+ assert.equal(createGroupUrl('https://example.com/','모임',[place]),createGroupUrl('https://example.com/','모임',[place],''));
+ for(const bad of ['2026-02-30','2026/11/28','28-11-2026']) assert.throws(()=>createGroupUrl('https://example.com/','모임',[place],bad));
+});
+test('groups expire after the meeting day in Korea time',()=>{
+ const g={date:'2026-11-27'};
+ assert.equal(groupShare.koreaToday(new Date('2026-11-27T14:59:00Z')),'2026-11-27');
+ assert.equal(groupShare.isGroupPast(g,new Date('2026-11-27T14:59:00Z')),false);
+ assert.equal(groupShare.isGroupPast(g,new Date('2026-11-27T15:00:00Z')),true);
+ assert.equal(groupShare.isGroupPast({},new Date('2030-01-01T00:00:00Z')),false);
+ assert.equal(groupShare.formatGroupDate('2026-11-28'),'11/28(토)');
+});
