@@ -102,6 +102,7 @@ async function queryProvider(provider, origin, destination, env, fetcher) {
 }
 
 const LINK_SCHEMA='CREATE TABLE IF NOT EXISTS share_links (id TEXT PRIMARY KEY, url TEXT NOT NULL, created_day TEXT NOT NULL);\nCREATE INDEX IF NOT EXISTS share_links_day ON share_links(created_day);';
+function validDate(d){if(typeof d!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(d))return false;const [y,m,day]=d.split('-').map(Number);return new Date(Date.UTC(y,m-1,day)).toISOString().slice(0,10)===d;}
 function validSharedUrl(raw) {
   if(typeof raw!=='string'||raw.length>12000)return false;
   try {
@@ -111,7 +112,7 @@ function validSharedUrl(raw) {
       if(u.search)return false;
       const encoded=u.hash.slice(7);if(!/^[\w-]+$/.test(encoded))return false;
       const g=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Uint8Array.from(atob(encoded.replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0))));
-      return g.v===1 && typeof g.name==='string' && g.name.trim().length>0 && g.name.length<=60 && Array.isArray(g.places) && g.places.length>0 && g.places.length<=8 && g.places.every(place) && Object.keys(g).every(k=>['v','name','places'].includes(k));
+      return g.v===1 && typeof g.name==='string' && g.name.trim().length>0 && g.name.length<=60 && Array.isArray(g.places) && g.places.length>0 && g.places.length<=8 && g.places.every(place) && Object.keys(g).every(k=>['v','name','places','date'].includes(k)) && (g.date===undefined||validDate(g.date));
     }
     if(u.hash||[...u.searchParams.keys()].some(k=>!['name','address','x','y'].includes(k)))return false;
     if(['name','address','x','y'].some(k=>u.searchParams.getAll(k).length!==1)||!u.searchParams.get('x').trim()||!u.searchParams.get('y').trim())return false;

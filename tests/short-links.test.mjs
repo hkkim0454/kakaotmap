@@ -31,3 +31,11 @@ test('client roundtrip is short, cached and expands to original URL',async()=>{
 });
 
  test('copyable worker source matches deployed source',async()=>{const {readFile}=await import('node:fs/promises');assert.equal(await readFile(new URL('../public/route-worker.txt',import.meta.url),'utf8'),await readFile(new URL('../worker/route-api.mjs',import.meta.url),'utf8'));});
+test('short links accept a valid meeting date and reject impossible dates',async()=>{
+ const {env}=fixture();const place={name:'서울역',address:'서울',x:126.97,y:37.55};
+ const dated=createGroupUrl(site+'/kakaotmap/','테스트 모임',[place],'2026-11-28');
+ assert.equal((await handleRequest(post(dated),env)).status,201);
+ const encode=g=>site+'/kakaotmap/#group='+Buffer.from(JSON.stringify(g)).toString('base64url');
+ assert.equal((await handleRequest(post(encode({v:1,name:'모임',places:[place],date:'2026-02-30'})),env)).status,400);
+ assert.equal((await handleRequest(post(encode({v:1,name:'모임',places:[place],date:'2026/11/28'})),env)).status,400);
+});
