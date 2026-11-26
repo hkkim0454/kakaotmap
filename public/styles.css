@@ -177,3 +177,6 @@ button{white-space:nowrap}
 .group-share-fallback{margin:8px 0 12px;font-size:12px;color:var(--muted)}
 .group-share-fallback label{display:block;margin-bottom:5px}
 .group-share-fallback input{width:100%}
+#group-library-list .library-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center}
+#group-library-list .library-row>.secondary{white-space:normal;justify-content:flex-start;text-align:left;line-height:1.45;border-radius:16px}
+@media(max-width:350px){#group-library-list .library-row>.secondary{grid-column:1/-1}#group-library-list .library-row>.secondary+.text-button{grid-column:2}}
